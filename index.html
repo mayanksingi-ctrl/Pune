@@ -97,8 +97,8 @@
     </div>
   </div>
 
-  <div class="card" id="devCard" style="display:none">
-    <h2 id="devTitle">Developers</h2>
+  <div class="card" id="devCard">
+    <h2 id="devTitle">Developers by locality</h2>
     <div id="devBody"></div>
   </div>
 
@@ -212,20 +212,38 @@ function render() {
 }
 
 function renderDevPanel() {
-  const card = document.getElementById('devCard');
-  if (state.locality === '(All)') { card.style.display = 'none'; return; }
-  card.style.display = '';
-  const info = developersFor(state.locality, DEV_DATA);
-  document.getElementById('devTitle').textContent = 'Developers \u2014 ' + state.locality;
+  document.getElementById('devTitle').textContent =
+    state.locality === '(All)' ? 'Developers by locality (all localities pulled so far)'
+                                : 'Developers \u2014 ' + state.locality;
   const body = document.getElementById('devBody');
-  if (!info || !info.pulled) {
-    body.innerHTML = '<div style="color:var(--ink-soft);font-style:italic;font-size:13px">' +
-      'Not pulled yet for this locality \u2014 only 4 of 315 Pune localities have developer data collected so far ' +
-      '(Wakad, Katraj, Ambegaon, Hinjewadi). Add more in Pune_Summary_Data.xlsx\'s Developers tab and refresh.</div>';
-  } else {
-    body.innerHTML = '<ol style="margin:0;padding-left:20px;font-size:13px">' +
-      info.devs.map(d => '<li>' + escapeHtml(d) + '</li>').join('') + '</ol>';
+
+  if (state.locality !== '(All)') {
+    const info = developersFor(state.locality, DEV_DATA);
+    if (!info || !info.pulled) {
+      body.innerHTML = '<div style="color:var(--ink-soft);font-style:italic;font-size:13px">' +
+        'Not pulled yet for "' + escapeHtml(state.locality) + '" \u2014 see the full list of what has been ' +
+        'pulled below, or add more in Pune_Summary_Data.xlsx\'s Developers tab and refresh.</div>';
+    } else {
+      body.innerHTML = '<ol style="margin:0 0 14px;padding-left:20px;font-size:13px">' +
+        info.devs.map(d => '<li>' + escapeHtml(d) + '</li>').join('') + '</ol>';
+    }
   }
+
+  // always show the full list of what has been pulled so far, regardless of the Locality filter
+  const pulled = DEV_DATA.filter(d => d.devs && d.devs.length > 0);
+  if (pulled.length === 0) {
+    body.innerHTML += '<div style="color:var(--ink-soft);font-style:italic;font-size:13px">' +
+      'No developer data has been pulled for any locality yet.</div>';
+    return;
+  }
+  body.innerHTML += '<table style="margin-top:4px"><thead><tr><th style="text-align:left">Locality</th>' +
+    '<th style="text-align:left">Developers</th></tr></thead><tbody>' +
+    pulled.map(d => '<tr><td style="text-align:left;vertical-align:top;font-weight:550">' + escapeHtml(d.locality) +
+      '</td><td style="text-align:left">' + escapeHtml(d.devs.join(', ')) + '</td></tr>').join('') +
+    '</tbody></table>' +
+    '<div style="color:var(--ink-soft);font-style:italic;font-size:12px;margin-top:8px">' +
+    pulled.length + ' of ' + DEV_DATA.length + ' Pune localities pulled so far. Add more in the Developers tab ' +
+    'of Pune_Summary_Data.xlsx and refresh \u2014 no code change needed.</div>';
 }
 
 function describeState() {
