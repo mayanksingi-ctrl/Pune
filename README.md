@@ -52,8 +52,27 @@ npx serve .
 - **BA Segment summary** — plain counts and quantities per segment. No
   compliance/coverage columns, since there's no Focus Account or KOP data
   for Pune to compute them from.
-- **Map** — the existing interactive Pune hotspot map, unchanged, needs
-  internet access for its street tiles.
+- **Developers** — appears once you pick a specific Locality in the filter
+  bar. Real data from the Developers tab in Pune_Summary_Data.xlsx, but very
+  sparse: only 4 of 315 localities have been pulled so far (Wakad, Katraj,
+  Ambegaon, Hinjewadi). Everything else correctly shows "not pulled yet"
+  rather than inventing data.
+- **Map** — the existing interactive Pune hotspot map. This had a genuine
+  bug (a JavaScript syntax error in its legend code, left over from an
+  earlier edit) that silently broke the *entire* map, not just the legend —
+  fixed and verified with `node --check` before this package was built.
+
+## What's deliberately NOT here, and why
+
+Gujarat's dashboard has a Focus Account / KOP Account compliance section
+(coverage %, scheme points, leads-per-segment) and live Focus/KOP dependence
+diagnostics. **Pune has none of this because the underlying source data was
+never collected for Pune** — there is no Focus Accounts list, no KOP-Q2
+target sheet, no RSM Review extract, and no leads file for Pune anywhere in
+this project. This isn't a feature I chose to leave out; there's nothing to
+compute it from. If you have Pune-equivalent versions of any of those four
+source files, send them and I'll integrate them exactly the way they were
+integrated for Gujarat.
 
 ## Verified against known figures before publishing
 
@@ -63,6 +82,8 @@ npx serve .
 - Segment totals sum exactly to the Grand Total
 - Filtering by segment (R1) and by locality (Wakad) both tested and matched
   independently-computed values
+- Developer lookup tested against both a "pulled" locality (Wakad, Ambegaon)
+  and an "unpulled" one (Kalewadi) — both render correctly
 
 ## Updating the data
 

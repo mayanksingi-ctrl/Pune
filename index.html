@@ -97,6 +97,11 @@
     </div>
   </div>
 
+  <div class="card" id="devCard" style="display:none">
+    <h2 id="devTitle">Developers</h2>
+    <div id="devBody"></div>
+  </div>
+
   <div class="card">
     <h2>Where the listing hotspots are</h2>
     <div class="map-frame"><iframe src="Pune_Hotspot_Map_v2.html" title="Pune hotspot map"></iframe></div>
@@ -108,8 +113,10 @@
 const DATA_FILE = 'Pune_Summary_Data.xlsx';
 const SHEET_NAME = 'Detailed Sheet-Pune';
 const HEADER_ROW = 2;
+const DEV_FILE = 'pune_developers.json';
 
 let ROWS = [];
+let DEV_DATA = [];
 const state = { baType: '(All)', segment: '(All)', loyalty: '(All)', productCategory: '(All)',
                 localityCategory: '(All)', locality: '(All)' };
 
@@ -126,6 +133,11 @@ async function init() {
   try {
     setLoading('Fetching ' + DATA_FILE + '\u2026');
     const buf = await fetchArrayBuffer(DATA_FILE);
+    setLoading('Fetching developer data\u2026');
+    try {
+      const devRes = await fetch(DEV_FILE);
+      DEV_DATA = devRes.ok ? await devRes.json() : [];
+    } catch (e) { DEV_DATA = []; }
     setLoading('Parsing workbook\u2026');
     const wb = XLSX.read(buf, { type: 'array' });
     const ws = wb.Sheets[SHEET_NAME];
@@ -196,6 +208,24 @@ function render() {
 
   renderLocalityTable(localityTable(filtered).slice(0, 25));
   renderSegmentTable(segmentTable(filtered));
+  renderDevPanel();
+}
+
+function renderDevPanel() {
+  const card = document.getElementById('devCard');
+  if (state.locality === '(All)') { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const info = developersFor(state.locality, DEV_DATA);
+  document.getElementById('devTitle').textContent = 'Developers \u2014 ' + state.locality;
+  const body = document.getElementById('devBody');
+  if (!info || !info.pulled) {
+    body.innerHTML = '<div style="color:var(--ink-soft);font-style:italic;font-size:13px">' +
+      'Not pulled yet for this locality \u2014 only 4 of 315 Pune localities have developer data collected so far ' +
+      '(Wakad, Katraj, Ambegaon, Hinjewadi). Add more in Pune_Summary_Data.xlsx\'s Developers tab and refresh.</div>';
+  } else {
+    body.innerHTML = '<ol style="margin:0;padding-left:20px;font-size:13px">' +
+      info.devs.map(d => '<li>' + escapeHtml(d) + '</li>').join('') + '</ol>';
+  }
 }
 
 function describeState() {

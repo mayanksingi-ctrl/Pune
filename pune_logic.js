@@ -123,6 +123,15 @@ function segmentTable(rows) {
   return out;
 }
 
+// ---------------- developer lookup (sparse - only pulled for a few localities) ----------------
+function developersFor(locality, devData) {
+  if (!locality || locality === '(All)') return null;
+  const match = devData.find(d => d.locality === locality);
+  if (!match) return { locality, devs: [], pulled: false };
+  return { locality, devs: match.devs, pulled: match.devs.length > 0 };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { prepareRows, applyFilters, districtTable, grandTotal, localityTable, segmentTable, matchesFilters };
+  module.exports = { prepareRows, applyFilters, districtTable, grandTotal, localityTable, segmentTable,
+                      developersFor, matchesFilters };
 }
