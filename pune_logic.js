@@ -104,7 +104,24 @@ function localityTable(rows) {
   return out;
 }
 
-// ---------------- segment summary (no Focus/KOP data exists for Pune) ----------------
+// ---------------- segment summary (no Focus/KOP data exists for Pune, so no coverage/points/
+// leads columns - but the driver text itself is a reference concept, not something that needs
+// live data, so it's included for structural parity with the Gujarat dashboard) ----------------
+const SEGMENT_DRIVERS = {
+  'R1': 'Focus account coverage, scheme point achievement and lead/specification',
+  'R2': 'Focus account coverage, scheme point achievement and lead/specification',
+  'S1': 'Focus account coverage, scheme point achievement and lead/specification',
+  'S2': 'Focus account coverage, scheme point achievement and lead/specification',
+  'Kitchen': 'Focus account coverage, scheme point achievement and lead/specification',
+  'Office Furniture': 'Focus account coverage and lead/specification',
+  'Doors': 'Focus account coverage and lead/specification',
+  'HOME FRUN.': 'Focus account coverage',
+  'Turnkey Contractor': 'Focus account coverage and lead/specification',
+  'COMMERCIAL PRJ.': 'Focus account coverage and lead/specification',
+  'FSU CONTRACTORS': 'Focus account coverage and lead/specification',
+  '(Blank)': 'Not yet segment-tagged - no driver assigned',
+};
+
 function segmentTable(rows) {
   const bySeg = new Map();
   for (const r of rows) {
@@ -117,7 +134,8 @@ function segmentTable(rows) {
   const out = [];
   for (const d of bySeg.values()) {
     const totalQty = d.qty.reduce((a, b) => a + b, 0);
-    out.push({ segment: d.segment, baCount: d.gst.size, qty: d.qty, totalQty });
+    out.push({ segment: d.segment, driver: SEGMENT_DRIVERS[d.segment] || '(no driver on file for this segment name)',
+               baCount: d.gst.size, qty: d.qty, totalQty });
   }
   out.sort((a, b) => b.totalQty - a.totalQty);
   return out;

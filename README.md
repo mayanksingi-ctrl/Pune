@@ -49,9 +49,13 @@ npx serve .
   everything sits in "Pune" district. Shows the top 25 by sale quantity,
   each tagged with its Locality Category (Hotspot High/Medium value, Area of
   Interest, Not classified).
-- **BA Segment summary** — plain counts and quantities per segment. No
-  compliance/coverage columns, since there's no Focus Account or KOP data
-  for Pune to compute them from.
+- **BA Segment process-input reference** — segment, BA count, total qty,
+  *plus* a Sales Driver reference column (same framework as Gujarat's: Focus
+  account coverage, scheme point achievement, lead/specification), adapted
+  to Pune's own segment names. This is descriptive reference text only, not
+  a computed metric — same as how Gujarat's own Sales Driver column was
+  always a fixed list, not filter-driven. No Coverage %, Scheme Points, or
+  Leads columns, for the reason below.
 - **Developers** — appears once you pick a specific Locality in the filter
   bar. Real data from the Developers tab in Pune_Summary_Data.xlsx, but very
   sparse: only 4 of 315 localities have been pulled so far (Wakad, Katraj,
