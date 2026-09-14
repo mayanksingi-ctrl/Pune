@@ -1,0 +1,71 @@
+# Pune City Summary — web dashboard
+
+Same approach as the Gujarat dashboard, scoped to Pune only. This is
+deliberately a **simpler** dashboard than Gujarat's — Pune's source data was
+never joined to Focus Accounts, KOP-Q2, RSM Review, or the leads extract, so
+there is no coverage / scheme-points / pro-rata section here. What's below
+reflects exactly what exists in the Pune data, nothing invented to match
+Gujarat's feature list.
+
+## What's inside
+
+- `index.html` — the dashboard page
+- `pune_logic.js` — the calculation engine (filtering, aggregation), kept
+  separate so it can be tested independently, same as Gujarat's
+- `Pune_Summary_Data.xlsx` — the data source. **Edit this directly** (the
+  "Detailed Sheet-Pune" tab) and refresh the browser — no rebuild needed.
+- `Pune_Hotspot_Map_v2.html` — the interactive Pune hotspot map, embedded inline.
+
+## Running it
+
+Same rule as the Gujarat package: **double-clicking `index.html` will not
+work.** Browsers block local file reads for security. Serve the folder with
+a one-line local server:
+
+**Python:**
+```
+cd path/to/this/folder
+python3 -m http.server 8000
+```
+Then open **http://localhost:8000**.
+
+**Node.js:**
+```
+npx serve .
+```
+
+**VS Code:** right-click `index.html` → "Open with Live Server".
+
+## What's shown
+
+- **Filters:** BA Type, BA Segment, Loyalty, Product Category, Locality
+  Category, Locality — matching the six filters on the original Pune Summary
+  sheet. There is no Zone filter, since Pune's data is scoped to a single
+  zone ("Pune City") already.
+- **Revenue by District** — Pune's data only has two districts (Pune,
+  Lonavala), so this table is small; it's kept for structural parity with
+  the Gujarat version.
+- **Top localities** — the more useful granularity for Pune, since almost
+  everything sits in "Pune" district. Shows the top 25 by sale quantity,
+  each tagged with its Locality Category (Hotspot High/Medium value, Area of
+  Interest, Not classified).
+- **BA Segment summary** — plain counts and quantities per segment. No
+  compliance/coverage columns, since there's no Focus Account or KOP data
+  for Pune to compute them from.
+- **Map** — the existing interactive Pune hotspot map, unchanged, needs
+  internet access for its street tiles.
+
+## Verified against known figures before publishing
+
+- Grand Total: 2,495,953 (matches the figure established when this project
+  first built the Pune summary)
+- Distinct BAs: 2,987
+- Segment totals sum exactly to the Grand Total
+- Filtering by segment (R1) and by locality (Wakad) both tested and matched
+  independently-computed values
+
+## Updating the data
+
+Edit `Pune_Summary_Data.xlsx`'s "Detailed Sheet-Pune" tab directly, save,
+refresh the browser. If you rename a column, update the matching field name
+near the top of `pune_logic.js`.

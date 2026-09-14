@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pune city listing hotspots</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+ :root{--hot:#C2410C;--aoi:#15803D;--ink:#1C1917;--paper:#FAF9F7;--rule:#D6D3D1}
+ *{box-sizing:border-box}
+ body{margin:0;font-family:"Inter","Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+ header{padding:18px 20px 12px;border-bottom:1px solid var(--rule)}
+ h1{margin:0 0 4px;font-size:19px;font-weight:650;letter-spacing:-0.01em}
+ header p{margin:0;font-size:13px;line-height:1.5;color:#57534E;max-width:62ch}
+ .wrap{display:flex;flex-direction:column;height:100vh}
+ .bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--rule);align-items:center}
+ button{font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--rule);background:#fff;
+   border-radius:999px;cursor:pointer;color:#44403C}
+ button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+ button:focus-visible{outline:2px solid #0EA5E9;outline-offset:2px}
+ #map{flex:1;min-height:420px}
+ .legend{background:#fff;padding:12px 14px;border:1px solid var(--rule);border-radius:8px;
+   font-size:12.5px;line-height:1.7;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+ .legend b{display:block;font-size:12px;margin-bottom:6px;font-weight:650}
+ .sw{display:inline-block;width:13px;height:13px;border-radius:3px;margin-right:7px;vertical-align:-2px}
+ .dot{display:inline-block;border-radius:50%;background:#1D4ED8;opacity:.85;margin-right:7px;vertical-align:-1px}
+ .pop{font-size:13px;line-height:1.55;min-width:200px}
+ .pop h3{margin:0 0 2px;font-size:14px}
+ .pop .meta{color:#57534E;font-size:12px;margin-bottom:6px}
+ .pop table{border-collapse:collapse;width:100%;margin-bottom:6px}
+ .pop td{padding:1px 0;font-size:12.5px}
+ .pop td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+ .pop ol{margin:4px 0 0 16px;padding:0;font-size:12px;color:#44403C}
+ footer{padding:10px 20px;border-top:1px solid var(--rule);font-size:12px;color:#78716C}
+</style></head><body>
+<div class="wrap">
+ <header>
+  <h1>Pune city &mdash; listing hotspots by value band</h1>
+  <p>Hotspots are set by cumulative share of sale plus rent listings, then split by average price per sqft: deep red high value, amber medium, grey low. Green rings are areas of interest, sharing an adjacency corridor with a high or medium value hotspot. Blue dots size the listing count. Positions are approximate locality centres.</p>
+ </header>
+ <div class="bar">
+    <button id="bHigh" aria-pressed="true">High value</button>
+  <button id="bMed" aria-pressed="true">Medium value</button>
+  <button id="bLow" aria-pressed="true">Low value</button>
+  <button id="bAoi" aria-pressed="true">Areas of interest</button>
+  <button id="bDots" aria-pressed="true">Listing volume</button>
+  <button id="bAll">Fit all</button>
+ </div>
+ <div id="map"></div>
+ <footer>25 localities. Value bands: High &ge; Rs 8,000/sqft, Medium &ge; Rs 5,500.</footer>
+</div>
+<script>
+const D=[{"loc":"Kalewadi","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"Medium","level":"Locality","listings":76,"rate":7086,"km":null,"bas":37,"lat":18.618,"lng":73.79},{"loc":"Chinchwad","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":157,"lat":18.64,"lng":73.79},{"loc":"PIMPRI","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":110,"lat":18.628,"lng":73.8},{"loc":"Bibwewadi","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":33,"lat":18.47,"lng":73.863},{"loc":"Thergaon","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":18,"lat":18.608,"lng":73.769},{"loc":"Ambegaon","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":38,"lat":18.453,"lng":73.842},{"loc":"Wakad","city":"PCMC West - Hinjewadi belt","cat":"Hotspot - High value","band":"High","level":"Locality","listings":1926,"rate":8213,"km":null,"bas":40,"lat":18.598,"lng":73.762},{"loc":"Tathawade","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":10,"lat":18.625,"lng":73.748},{"loc":"Narhe","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":19,"lat":18.453,"lng":73.818},{"loc":"SINHGAD ROAD","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":1,"lat":18.464,"lng":73.828},{"loc":"Katraj","city":"South Pune - Sinhagad / Katraj","cat":"Hotspot - Medium value","band":"Medium","level":"Locality","listings":421,"rate":5959,"km":null,"bas":27,"lat":18.448,"lng":73.86},{"loc":"Ravet","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":21,"lat":18.648,"lng":73.748},{"loc":"Dhayari","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":36,"lat":18.447,"lng":73.806},{"loc":"Sinhagad Road","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":22,"lat":18.464,"lng":73.828},{"loc":"Hingane","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":1,"lat":18.482,"lng":73.828},{"loc":"Pimple Saudagar","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":10,"lat":18.596,"lng":73.796},{"loc":"Akurdi","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":12,"lat":18.648,"lng":73.766},{"loc":"Hinjewadi","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":12,"lat":18.591,"lng":73.738},{"loc":"WADGAON","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":2,"lat":18.46,"lng":73.81},{"loc":"Vadgaon","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":22,"lat":18.46,"lng":73.81},{"loc":"Pcmc","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":6,"lat":18.63,"lng":73.795},{"loc":"Pimple Gurav","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":21,"lat":18.585,"lng":73.818},{"loc":"Sahakar Nagar","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":4,"lat":18.488,"lng":73.852},{"loc":"Dhankwadi","city":"South Pune - Sinhagad / Katraj","cat":"Area of Interest","band":"Medium","level":"Locality","listings":16,"rate":6053,"km":null,"bas":26,"lat":18.465,"lng":73.853},{"loc":"Pimpri Chinchwad","city":"PCMC West - Hinjewadi belt","cat":"Area of Interest","band":"","level":"Locality","listings":null,"rate":null,"km":null,"bas":9,"lat":18.63,"lng":73.795}];
+const map=L.map('map',{scrollWheelZoom:true}).setView([22.3,72.7],9);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:18,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
+const fmt=n=>(n||0).toLocaleString('en-IN');
+function popup(d){
+  return '<div class="pop"><h3>'+d.loc+'</h3><div class="meta">'+d.city+' &middot; '+d.cat+' &middot; '+d.level+'</div>'+
+   '<table>'+(d.listings?'<tr><td>Listings for sale</td><td>'+fmt(d.listings)+'</td></tr>':'<tr><td>Listings</td><td>not pulled</td></tr>')+
+   (d.rate?'<tr><td>Avg Rs/sqft</td><td>'+fmt(d.rate)+'</td></tr>':'')+
+   (d.km?'<tr><td>Km to hotspot</td><td>'+d.km+'</td></tr>':'')+'</table></div>';
+}
+const layers={High:L.layerGroup().addTo(map),Medium:L.layerGroup().addTo(map),
+  Low:L.layerGroup().addTo(map),AOI:L.layerGroup().addTo(map),Dots:L.layerGroup().addTo(map)};
+const STYLE={High:{c:'#B91C1C',f:.42,w:3,dash:null,r:2200},
+             Medium:{c:'#F59E0B',f:.34,w:3,dash:'6,4',r:1900},
+             Low:{c:'#78716C',f:.22,w:2,dash:'2,5',r:1600},
+             AOI:{c:'#15803D',f:.12,w:1.5,dash:null,r:1300}};
+D.forEach(d=>{
+  const isHot=d.cat.indexOf('Hotspot')===0;
+  const key=isHot?(d.band||'Low'):'AOI', s=STYLE[key];
+  L.circle([d.lat,d.lng],{radius:s.r,color:s.c,weight:s.w,opacity:.95,dashArray:s.dash,
+    fillColor:s.c,fillOpacity:s.f}).bindPopup(popup(d)).addTo(layers[key]);
+  if(isHot){
+    L.marker([d.lat,d.lng],{icon:L.divIcon({className:'',iconSize:[74,20],
+      html:'<div style="background:'+s.c+';color:#fff;font:600 10px/20px Inter,sans-serif;'+
+           'text-align:center;border-radius:10px;white-space:nowrap;padding:0 6px">'+key+' value</div>'})})
+     .bindPopup(popup(d)).addTo(layers[key]);
+  }
+  if(d.listings){
+    L.circleMarker([d.lat,d.lng],{radius:Math.max(4,Math.sqrt(d.listings)*0.5),
+      color:'#1E3A8A',weight:1,fillColor:'#1D4ED8',fillOpacity:.85})
+     .bindPopup(popup(d)).addTo(layers.Dots);
+  }
+});
+const legend=L.control({position:'bottomright'});
+legend.onAdd=function(){
+  const el=L.DomUtil.create('div','legend');
+  el.innerHTML='<b>Legend</b>'+
+   '<span class="sw" style="background:#B91C1C;opacity:.75"></span>Hotspot &mdash; high value<br>'+
+   '<span class="sw" style="background:#F59E0B;opacity:.75"></span>Hotspot &mdash; medium value<br>'+
+   '<span class="sw" style="background:#78716C;opacity:.6"></span>Hotspot &mdash; low value<br>'+
+   '<span class="sw" style="background:#15803D;opacity:.45"></span>Area of interest<br>'+
+   '<span class="dot" style="width:8px;height:8px"></span>Listings &mdash; few<br>'+
+   '<span class="dot" style="width:18px;height:18px"></span>Listings &mdash; many';opacity:.65"></span>Hotspot &mdash; high value<br>'+
+   '<span class="sw" style="background:#F59E0B;opacity:.65"></span>Hotspot &mdash; medium value<br>'+
+   '<span class="sw" style="background:#78716C;opacity:.5"></span>Hotspot &mdash; low value<br>'+
+   '<span class="sw" style="background:#15803D;opacity:.4"></span>Area of interest<br>'+
+   '<span class="dot" style="width:8px;height:8px"></span>Listings &mdash; few<br>'+
+   '<span class="dot" style="width:18px;height:18px"></span>Listings &mdash; many';opacity:.55"></span>Hotspot locality<br>'+
+   '<span class="sw" style="background:#15803D;opacity:.4"></span>Area of interest<br>'+
+   '<span class="dot" style="width:8px;height:8px"></span>Listings &mdash; few<br>'+
+   '<span class="dot" style="width:16px;height:16px"></span>Listings &mdash; many';
+  return el;
+};
+legend.addTo(map);
+function tog(id,layer){const b=document.getElementById(id);b.addEventListener('click',()=>{
+  const on=b.getAttribute('aria-pressed')==='true';
+  b.setAttribute('aria-pressed',String(!on));
+  if(on){map.removeLayer(layer)}else{map.addLayer(layer)}
+});}
+tog('bHigh',layers.High);tog('bMed',layers.Medium);tog('bLow',layers.Low);
+tog('bAoi',layers.AOI);tog('bDots',layers.Dots);
+document.getElementById('bAll').onclick=()=>map.fitBounds(L.latLngBounds(D.map(d=>[d.lat,d.lng])).pad(.15));
+map.fitBounds(L.latLngBounds(D.map(d=>[d.lat,d.lng])).pad(.15));
+</script></body></html>

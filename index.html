@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pune City Summary</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="pune_logic.js"></script>
+<style>
+  :root {
+    --ink: #14213D; --ink-soft: #4A5568; --line: #E2E5EA; --paper: #FCFCFB; --panel: #FFFFFF;
+    --accent: #2E5A8C; --red: #C13B3B; --amber: #C88A1E; --green: #2F8552; --grey: #8A8F98;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+         background: var(--paper); color: var(--ink); font-size: 14px; line-height: 1.4; }
+  .num { font-variant-numeric: tabular-nums; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  h2 { font-size: 14px; margin: 0 0 10px; font-weight: 650; color: var(--accent); }
+  header { padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--panel);
+           display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 30; }
+  #status { font-size: 12px; color: var(--ink-soft); }
+  #status.error { color: var(--red); font-weight: 600; }
+  .filters { background: var(--panel); border-bottom: 1px solid var(--line); padding: 12px 24px;
+             display: flex; flex-wrap: wrap; gap: 14px; position: sticky; top: 57px; z-index: 29; }
+  .filter-item { display: flex; flex-direction: column; gap: 3px; min-width: 150px; }
+  .filter-item label { font-size: 11px; color: var(--ink-soft); font-weight: 600; }
+  .filter-item select { font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+                         background: #fff; color: var(--ink); cursor: pointer; }
+  .filter-item select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  main { padding: 20px 24px 60px; max-width: 1400px; margin: 0 auto; }
+  .showing { font-size: 13px; color: var(--accent); font-style: italic; margin-bottom: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 980px) { .grid-2 { grid-template-columns: 1fr; } }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead th { position: sticky; top: 0; background: #F4F6F9; text-align: right; padding: 6px 8px;
+             border-bottom: 2px solid var(--line); font-weight: 650; color: var(--ink-soft); font-size: 11px; white-space: nowrap; }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  tbody td:first-child { text-align: left; font-weight: 550; }
+  tbody tr:hover { background: #F8FAFC; }
+  tfoot td { padding: 6px 8px; font-weight: 700; border-top: 2px solid var(--ink); text-align: right; }
+  tfoot td:first-child { text-align: left; }
+  .scroll-table { max-height: 420px; overflow-y: auto; }
+  .pct-red { color: var(--red); font-weight: 650; }
+  .pct-amber { color: var(--amber); font-weight: 650; }
+  .pct-green { color: var(--green); font-weight: 650; }
+  .pct-grey { color: var(--grey); }
+  .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #EEF2F7; color: var(--ink-soft); margin-left: 6px; }
+  .map-frame { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; height: 480px; }
+  .map-frame iframe { width: 100%; height: 100%; border: none; }
+  .map-note { font-size: 11px; color: var(--ink-soft); margin-top: 8px; }
+  .loading-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 100;
+                      display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--accent);
+             border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loadingText">Loading Pune_Summary_Data.xlsx&hellip;</div>
+</div>
+
+<header>
+  <h1>Pune City Summary</h1>
+  <div id="status"></div>
+</header>
+
+<div class="filters" id="filterBar"></div>
+
+<main>
+  <div class="showing" id="showingLine"></div>
+
+  <div class="card">
+    <h2 id="districtTitle">Revenue by District</h2>
+    <div class="scroll-table">
+      <table id="districtTable"><thead></thead><tbody></tbody><tfoot></tfoot></table>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2 id="localityTitle">Top localities</h2>
+      <div class="scroll-table">
+        <table id="localityTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+    <div class="card">
+      <h2 id="segmentTitle">BA Segment summary</h2>
+      <div class="scroll-table">
+        <table id="segmentTable"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Where the listing hotspots are</h2>
+    <div class="map-frame"><iframe src="Pune_Hotspot_Map_v2.html" title="Pune hotspot map"></iframe></div>
+    <div class="map-note">Interactive map — pan, zoom, and toggle layers. Needs an internet connection to load street tiles.</div>
+  </div>
+</main>
+
+<script>
+const DATA_FILE = 'Pune_Summary_Data.xlsx';
+const SHEET_NAME = 'Detailed Sheet-Pune';
+const HEADER_ROW = 2;
+
+let ROWS = [];
+const state = { baType: '(All)', segment: '(All)', loyalty: '(All)', productCategory: '(All)',
+                localityCategory: '(All)', locality: '(All)' };
+
+const LISTS = {
+  baType: ['(All)', 'OEM', 'Projects', 'Retail'],
+  loyalty: ['(All)', 'High Loyalty', 'Low Loyalty'],
+  productCategory: ['(All)', 'CAL+', 'LAM', 'Flex', 'SLC+', 'SLC', 'Liner & Other'],
+  localityCategory: ['(All)', 'Hotspot - High value', 'Hotspot - Medium value', 'Area of Interest', 'Not classified'],
+};
+let SEGMENTS = ['(All)'];
+let LOCALITIES = ['(All)'];
+
+async function init() {
+  try {
+    setLoading('Fetching ' + DATA_FILE + '\u2026');
+    const buf = await fetchArrayBuffer(DATA_FILE);
+    setLoading('Parsing workbook\u2026');
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[SHEET_NAME];
+    if (!ws) throw new Error('Sheet "' + SHEET_NAME + '" not found in ' + DATA_FILE);
+    const raw = XLSX.utils.sheet_to_json(ws, { range: HEADER_ROW - 1, defval: null });
+    ROWS = prepareRows(raw).filter(r => r.gstin);
+    document.getElementById('status').textContent = ROWS.length.toLocaleString() + ' accounts loaded';
+    SEGMENTS = ['(All)', ...new Set(ROWS.map(r => r.segment))].sort();
+    const locCounts = new Map();
+    ROWS.forEach(r => locCounts.set(r.cluster, (locCounts.get(r.cluster) || 0) + 1));
+    LOCALITIES = ['(All)', ...[...locCounts.keys()].sort()];
+    buildFilterBar();
+    render();
+    document.getElementById('loadingOverlay').style.display = 'none';
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function fetchArrayBuffer(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error('Could not fetch ' + path + ' (HTTP ' + res.status + '). ' +
+    'If you opened this file directly (file://), your browser blocks local file reads \u2014 ' +
+    'see the README for a one-line local server.');
+  return await res.arrayBuffer();
+}
+
+function showError(err) {
+  document.getElementById('loadingText').innerHTML = '<strong>Could not load the dashboard.</strong><br><br>' + escapeHtml(err.message);
+  document.getElementById('status').textContent = 'Load failed';
+  document.getElementById('status').className = 'error';
+}
+function setLoading(msg) { document.getElementById('loadingText').textContent = msg; }
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function buildFilterBar() {
+  const bar = document.getElementById('filterBar');
+  bar.innerHTML = '';
+  bar.appendChild(makeSelect('baType', 'BA Type', LISTS.baType));
+  bar.appendChild(makeSelect('segment', 'BA Segment', SEGMENTS));
+  bar.appendChild(makeSelect('loyalty', 'Loyalty', LISTS.loyalty));
+  bar.appendChild(makeSelect('productCategory', 'Product Category', LISTS.productCategory));
+  bar.appendChild(makeSelect('localityCategory', 'Locality Category', LISTS.localityCategory));
+  bar.appendChild(makeSelect('locality', 'Locality', LOCALITIES));
+}
+
+function makeSelect(key, label, options) {
+  const wrap = document.createElement('div'); wrap.className = 'filter-item';
+  const lab = document.createElement('label'); lab.textContent = label;
+  const sel = document.createElement('select'); sel.setAttribute('aria-label', label);
+  options.forEach(o => {
+    const opt = document.createElement('option'); opt.value = o; opt.textContent = o;
+    if (state[key] === o) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => { state[key] = sel.value; render(); });
+  wrap.appendChild(lab); wrap.appendChild(sel);
+  return wrap;
+}
+
+function render() {
+  const filtered = applyFilters(ROWS, state);
+  document.getElementById('showingLine').textContent = 'Showing: ' + describeState();
+
+  const dt = districtTable(filtered);
+  const gt = grandTotal(dt);
+  renderDistrictTable(dt, gt);
+
+  renderLocalityTable(localityTable(filtered).slice(0, 25));
+  renderSegmentTable(segmentTable(filtered));
+}
+
+function describeState() {
+  const parts = Object.values(state).filter(v => v !== '(All)');
+  return parts.length ? parts.join(' \u00b7 ') : 'everything (no filters applied)';
+}
+
+function fmt(n) { return n === null || n === undefined ? '\u2013' : Math.round(n).toLocaleString(); }
+function fmtPct(p) { return p === null || p === undefined ? '\u2013' : (p * 100).toFixed(1) + '%'; }
+function pctClass(p) {
+  if (p === null || p === undefined) return 'pct-grey';
+  if (p < 0) return 'pct-red';
+  if (p < 0.10) return 'pct-amber';
+  return 'pct-green';
+}
+
+function renderDistrictTable(dt, gt) {
+  document.getElementById('districtTitle').textContent =
+    'Revenue by District (' + dt.length + (dt.length === 1 ? ' district' : ' districts') + ' with data)';
+  document.querySelector('#districtTable thead').innerHTML =
+    '<tr><th>District</th><th>23-24</th><th>24-25</th><th>25-26</th><th>26-27</th><th>Total Qty</th>' +
+    '<th>Distinct BAs</th><th>23\u219224</th><th>24\u219225</th><th>25\u219226</th></tr>';
+  document.querySelector('#districtTable tbody').innerHTML = dt.map(d => '<tr>' +
+    '<td>' + escapeHtml(d.district) + '</td>' +
+    d.qty.map(q => '<td class="num">' + fmt(q) + '</td>').join('') +
+    '<td class="num">' + fmt(d.totalQty) + '</td>' +
+    '<td class="num">' + fmt(d.dcTotal) + '</td>' +
+    d.growth.map(g => '<td class="num ' + pctClass(g) + '">' + fmtPct(g) + '</td>').join('') +
+    '</tr>').join('');
+  document.querySelector('#districtTable tfoot').innerHTML = '<tr><td>Grand Total</td>' +
+    gt.qty.map(q => '<td class="num">' + fmt(q) + '</td>').join('') +
+    '<td class="num">' + fmt(gt.totalQty) + '</td><td></td><td></td><td></td><td></td></tr>';
+}
+
+function renderLocalityTable(locs) {
+  document.getElementById('localityTitle').textContent = 'Top localities (' + locs.length + ' shown)';
+  document.querySelector('#localityTable thead').innerHTML =
+    '<tr><th>Locality</th><th>Category</th><th>BAs</th><th>Total Qty</th></tr>';
+  document.querySelector('#localityTable tbody').innerHTML = locs.map(l => '<tr>' +
+    '<td>' + escapeHtml(l.locality) + '<span class="badge">' + escapeHtml(l.localityCategory.replace('Hotspot - ','')) + '</span></td>' +
+    '<td style="text-align:left">' + escapeHtml(l.localityCategory) + '</td>' +
+    '<td class="num">' + fmt(l.baCount) + '</td>' +
+    '<td class="num">' + fmt(l.totalQty) + '</td>' +
+    '</tr>').join('');
+}
+
+function renderSegmentTable(seg) {
+  document.querySelector('#segmentTable thead').innerHTML =
+    '<tr><th>Segment</th><th>BAs</th><th>Total Qty</th></tr>';
+  document.querySelector('#segmentTable tbody').innerHTML = seg.map(s => '<tr>' +
+    '<td>' + escapeHtml(s.segment) + '</td>' +
+    '<td class="num">' + fmt(s.baCount) + '</td>' +
+    '<td class="num">' + fmt(s.totalQty) + '</td>' +
+    '</tr>').join('');
+}
+
+init();
+</script>
+</body>
+</html>
