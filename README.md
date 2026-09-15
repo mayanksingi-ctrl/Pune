@@ -70,13 +70,26 @@ npx serve .
 
 Gujarat's dashboard has a Focus Account / KOP Account compliance section
 (coverage %, scheme points, leads-per-segment) and live Focus/KOP dependence
-diagnostics. **Pune has none of this because the underlying source data was
-never collected for Pune** — there is no Focus Accounts list, no KOP-Q2
-target sheet, no RSM Review extract, and no leads file for Pune anywhere in
-this project. This isn't a feature I chose to leave out; there's nothing to
-compute it from. If you have Pune-equivalent versions of any of those four
-source files, send them and I'll integrate them exactly the way they were
-integrated for Gujarat.
+diagnostics. **The process-input table now has the identical column
+structure as Gujarat's** (Focus Accounts, Covered, Coverage %, Scheme Points
+Achieved, Scheme Points Target, Scheme Points %, Leads) — but every one of
+those columns shows N/A for Pune, because the underlying source data was
+never collected for Pune: no Focus Accounts list, no KOP-Q2 target sheet,
+no RSM Review extract, no leads file.
+
+One thing worth flagging explicitly: **a file called
+`Main-Pune_Branch_Summary.xlsx` does contain sheets named "Focus Accounts"
+and "KOP-Q2-Gujarat"**, which looks at first glance like exactly what's
+missing. On inspection, though, those sheets are an exact, unedited copy of
+Gujarat's own data — identical GSTINs, identical account names, identical
+KOP point targets, row for row. It's a leftover template artifact, not
+Pune-specific data, so it is deliberately not used here — using it would
+mean mislabeling Gujarat's real focus accounts as if they were Pune's,
+which is worse than showing nothing.
+
+If genuine Pune-equivalent versions of any of those four source files exist
+somewhere, send them and this table will compute real numbers instead of
+N/A, exactly the way it does for Gujarat.
 
 ## Verified against known figures before publishing
 

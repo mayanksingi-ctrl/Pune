@@ -82,23 +82,26 @@
     </div>
   </div>
 
-  <div class="grid-2">
-    <div class="card">
-      <h2 id="localityTitle">Top localities</h2>
-      <div class="scroll-table">
-        <table id="localityTable"><thead></thead><tbody></tbody></table>
-      </div>
+  <div class="card">
+    <h2 id="localityTitle">Top localities</h2>
+    <div class="scroll-table">
+      <table id="localityTable"><thead></thead><tbody></tbody></table>
     </div>
-    <div class="card">
-      <h2 id="segmentTitle">BA Segment process-input reference</h2>
-      <div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-bottom:8px">
-        Sales Driver is a fixed reference list, same as Gujarat's — it doesn't change with the filters.
-        Coverage %, Scheme Points, and Leads columns aren't shown because Pune's data was never joined to
-        a Focus Accounts / KOP-Q2 / RSM extract the way Gujarat's was — see the README.
-      </div>
-      <div class="scroll-table">
-        <table id="segmentTable"><thead></thead><tbody></tbody></table>
-      </div>
+  </div>
+
+  <div class="card">
+    <h2 id="segmentTitle">BA Segment process-input table</h2>
+    <div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-bottom:8px">
+      Same column structure as Gujarat's process-input table. Sales Driver is a fixed reference list,
+      same as Gujarat's — it doesn't change with the filters. Focus Accounts, Covered, Coverage %,
+      Scheme Points, and Leads all show N/A: Pune's data was never joined to a Focus Accounts / KOP-Q2 /
+      RSM extract the way Gujarat's was, and a file that looked like it might have this
+      (Main-Pune_Branch_Summary.xlsx) turned out, on inspection, to contain an exact unedited copy of
+      Gujarat's own Focus Accounts and KOP-Q2 data rather than anything Pune-specific — so it isn't
+      used here. See the README for detail.
+    </div>
+    <div class="scroll-table">
+      <table id="segmentTable"><thead></thead><tbody></tbody></table>
     </div>
   </div>
 
@@ -297,12 +300,21 @@ function renderLocalityTable(locs) {
 
 function renderSegmentTable(seg) {
   document.querySelector('#segmentTable thead').innerHTML =
-    '<tr><th>Segment</th><th>Sales Driver (reference)</th><th>BAs</th><th>Total Qty</th></tr>';
+    '<tr><th>Segment</th><th>Sales Driver (reference)</th><th>BAs</th><th>Total Qty</th>' +
+    '<th>Focus Accounts</th><th>Covered</th><th>Coverage %</th>' +
+    '<th>Scheme Pts Achieved</th><th>Scheme Pts Target</th><th>Scheme Pts %</th><th>Leads</th></tr>';
   document.querySelector('#segmentTable tbody').innerHTML = seg.map(s => '<tr>' +
     '<td>' + escapeHtml(s.segment) + '</td>' +
-    '<td style="text-align:left;color:var(--ink-soft);font-size:12px;white-space:normal;max-width:260px">' + escapeHtml(s.driver) + '</td>' +
+    '<td style="text-align:left;color:var(--ink-soft);font-size:12px;white-space:normal;max-width:220px">' + escapeHtml(s.driver) + '</td>' +
     '<td class="num">' + fmt(s.baCount) + '</td>' +
     '<td class="num">' + fmt(s.totalQty) + '</td>' +
+    '<td class="num" title="No Focus Accounts source for Pune">N/A</td>' +
+    '<td class="num" title="No Focus Accounts source for Pune">N/A</td>' +
+    '<td class="num pct-grey" title="No Focus Accounts source for Pune">N/A</td>' +
+    '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
+    '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
+    '<td class="num pct-grey" title="No KOP-Q2 source for Pune">N/A</td>' +
+    '<td class="num" title="No leads extract for Pune">N/A</td>' +
     '</tr>').join('');
 }
 

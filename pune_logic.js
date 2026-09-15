@@ -134,8 +134,18 @@ function segmentTable(rows) {
   const out = [];
   for (const d of bySeg.values()) {
     const totalQty = d.qty.reduce((a, b) => a + b, 0);
-    out.push({ segment: d.segment, driver: SEGMENT_DRIVERS[d.segment] || '(no driver on file for this segment name)',
-               baCount: d.gst.size, qty: d.qty, totalQty });
+    out.push({
+      segment: d.segment, driver: SEGMENT_DRIVERS[d.segment] || '(no driver on file for this segment name)',
+      baCount: d.gst.size, qty: d.qty, totalQty,
+      // Gujarat's table has these four measured from a Focus Accounts / KOP-Q2 / RSM Review /
+      // leads join that was never built for Pune - no such source exists (verified, including
+      // checking a file that superficially looked like it might: Main-Pune_Branch_Summary.xlsx's
+      // Focus Accounts and KOP-Q2 tabs turned out to be an exact, unedited copy of Gujarat's own
+      // data, not Pune's, so it is deliberately not used here). Columns kept for structural
+      // parity with Gujarat's table; values are honestly null rather than fabricated.
+      focusAccounts: null, covered: null, coveragePct: null,
+      kopAchieved: null, kopTarget: null, pointsPct: null, leads: null,
+    });
   }
   out.sort((a, b) => b.totalQty - a.totalQty);
   return out;
