@@ -101,6 +101,22 @@ N/A, exactly the way it does for Gujarat.
   independently-computed values
 - Developer lookup tested against both a "pulled" locality (Wakad, Ambegaon)
   and an "unpulled" one (Kalewadi) — both render correctly
+- Fixed a leftover bug in the map file: its initial view was centred on
+  Gujarat's coordinates (22.3, 72.7), not Pune's — corrected to Pune's own
+  coordinates (18.52, 73.85)
+- The growth% columns in the Revenue table use a genuine heat-map background
+  gradient, matching the Excel convention
+
+## Pro-rata growth (25-26 \u2192 26-27), same fix applied to the Gujarat workbook
+
+FY26-27 is a partial year, so comparing it directly against a full FY25-26
+year understates performance. The dashboard now has an editable "FY26-27
+data captured through" date; the 25-26 \u2192 26-27 growth column compares
+26-27's actual figure against a pro-rated slice of 25-26 (assuming even
+monthly spread) rather than the full year. Tested: with the default 20-Aug-2026
+date, Pune's raw (unadjusted) degrowth of -70.0% becomes a pro-rata-adjusted
+-23.0% \u2014 a materially different, more honest read of performance.
+Changing the date recalculates live.
 
 ## Updating the data
 

@@ -43,7 +43,7 @@ function applyFilters(rows, f) {
 }
 
 // ---------------- district table ----------------
-function districtTable(rows) {
+function districtTable(rows, prorataFactor) {
   const byDistrict = new Map();
   for (const r of rows) {
     if (!byDistrict.has(r.district)) {
@@ -65,7 +65,8 @@ function districtTable(rows) {
     out.push({
       district: d.district, dc: d.dcY.map(s => s.size), dcTotal: d.gst.size,
       qty: d.qty, totalQty,
-      growth: [pctGrowth(d.qty[0], d.qty[1]), pctGrowth(d.qty[1], d.qty[2]), pctGrowth(d.qty[2], d.qty[3])],
+      growth: [pctGrowth(d.qty[0], d.qty[1]), pctGrowth(d.qty[1], d.qty[2]),
+               prorataGrowth(d.qty[2], d.qty[3], prorataFactor)],
     });
   }
   out.sort((a, b) => b.totalQty - a.totalQty);
@@ -73,6 +74,16 @@ function districtTable(rows) {
 }
 
 function pctGrowth(prev, cur) { return !prev ? null : (cur - prev) / prev; }
+
+// pro-rata adjusted growth for the 25-26 -> 26-27 comparison specifically: 26-27 is a
+// partial year, so comparing it against a FULL 25-26 year understates performance. Compare
+// against a pro-rated slice of 25-26 instead (same days-elapsed logic as the Gujarat workbook).
+function prorataGrowth(qty2526, qty2627, factor) {
+  if (!qty2526) return null;
+  const prorated = qty2526 * factor;
+  if (!prorated) return null;
+  return (qty2627 - prorated) / prorated;
+}
 
 function grandTotal(table) {
   const qty = [0, 0, 0, 0];
@@ -161,5 +172,5 @@ function developersFor(locality, devData) {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { prepareRows, applyFilters, districtTable, grandTotal, localityTable, segmentTable,
-                      developersFor, matchesFilters };
+                      developersFor, prorataGrowth, matchesFilters };
 }

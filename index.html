@@ -43,10 +43,11 @@
   tfoot td { padding: 6px 8px; font-weight: 700; border-top: 2px solid var(--ink); text-align: right; }
   tfoot td:first-child { text-align: left; }
   .scroll-table { max-height: 420px; overflow-y: auto; }
-  .pct-red { color: var(--red); font-weight: 650; }
-  .pct-amber { color: var(--amber); font-weight: 650; }
-  .pct-green { color: var(--green); font-weight: 650; }
+  .pct-red { background: #FDE8E8; color: #A33; font-weight: 650; }
+  .pct-amber { background: #FDF3D8; color: #A66A00; font-weight: 650; }
+  .pct-green { background: #E4F3E9; color: #1F6B3D; font-weight: 650; }
   .pct-grey { color: var(--grey); }
+  .heat-cell { padding: 5px 10px !important; border-radius: 3px; }
   .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #EEF2F7; color: var(--ink-soft); margin-left: 6px; }
   .map-frame { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; height: 480px; }
   .map-frame iframe { width: 100%; height: 100%; border: none; }
@@ -74,6 +75,20 @@
 
 <main>
   <div class="showing" id="showingLine"></div>
+
+  <div class="card" id="prorataCard">
+    <h2>FY26-27 pro-rata comparison</h2>
+    <div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px">
+      The 25-26 &rarr; 26-27 growth column compares a full 25-26 year against a still-partial 26-27
+      year, which understates performance. This assumes 25-26 sales were spread evenly across its own
+      12 months, and compares 26-27 against that same pro-rated slice instead &mdash; same approach as
+      the Gujarat workbook. Estimate only; edit the date to match when your 26-27 figures actually stop.
+    </div>
+    <label style="font-size:12px;font-weight:600;color:var(--ink-soft)">FY26-27 data captured through:
+      <input type="date" id="asOfDate" value="2026-08-20" style="margin-left:8px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;font-size:13px">
+    </label>
+    <span id="prorataFactorNote" style="margin-left:16px;font-size:12px;color:var(--ink-soft)"></span>
+  </div>
 
   <div class="card">
     <h2 id="districtTitle">Revenue by District</h2>
@@ -158,6 +173,7 @@ async function init() {
     ROWS.forEach(r => locCounts.set(r.cluster, (locCounts.get(r.cluster) || 0) + 1));
     LOCALITIES = ['(All)', ...[...locCounts.keys()].sort()];
     buildFilterBar();
+    document.getElementById('asOfDate').addEventListener('change', render);
     render();
     document.getElementById('loadingOverlay').style.display = 'none';
   } catch (err) {
@@ -206,13 +222,25 @@ function makeSelect(key, label, options) {
   return wrap;
 }
 
+function computeProrataFactor() {
+  const asOfStr = document.getElementById('asOfDate').value || '2026-08-20';
+  const asOf = new Date(asOfStr + 'T00:00:00Z');
+  const fyStart = new Date('2026-04-01T00:00:00Z');
+  const daysElapsed = Math.round((asOf - fyStart) / 86400000) + 1;
+  const factor = Math.max(0, daysElapsed) / 365;
+  document.getElementById('prorataFactorNote').textContent =
+    daysElapsed + ' days elapsed \u2192 pro-rata factor ' + (factor * 100).toFixed(1) + '%';
+  return factor;
+}
+
 function render() {
   const filtered = applyFilters(ROWS, state);
   document.getElementById('showingLine').textContent = 'Showing: ' + describeState();
 
-  const dt = districtTable(filtered);
+  const prorataFactor = computeProrataFactor();
+  const dt = districtTable(filtered, prorataFactor);
   const gt = grandTotal(dt);
-  renderDistrictTable(dt, gt);
+  renderDistrictTable(dt, gt, prorataFactor);
 
   renderLocalityTable(localityTable(filtered).slice(0, 25));
   renderSegmentTable(segmentTable(filtered));
@@ -261,29 +289,51 @@ function describeState() {
 
 function fmt(n) { return n === null || n === undefined ? '\u2013' : Math.round(n).toLocaleString(); }
 function fmtPct(p) { return p === null || p === undefined ? '\u2013' : (p * 100).toFixed(1) + '%'; }
-function pctClass(p) {
-  if (p === null || p === undefined) return 'pct-grey';
-  if (p < 0) return 'pct-red';
-  if (p < 0.10) return 'pct-amber';
-  return 'pct-green';
+
+// true heat-map gradient: red -> amber -> green, interpolated by the value's position
+// between the min and max of the CURRENT set of values (same idea as Excel's 3-colour scale)
+function heatStyle(value, allValues) {
+  if (value === null || value === undefined) return '';
+  const vals = allValues.filter(v => v !== null && v !== undefined);
+  if (vals.length < 2) return '';
+  const min = Math.min(...vals), max = Math.max(...vals);
+  if (min === max) return '';
+  const mid = 0 >= min && 0 <= max ? 0 : (min + max) / 2;
+  const RED = [217, 83, 79], AMBER = [255, 214, 92], GREEN = [92, 184, 120];
+  let t, from, to;
+  if (value <= mid) {
+    t = mid === min ? 0 : (value - min) / (mid - min);
+    from = RED; to = AMBER;
+  } else {
+    t = max === mid ? 1 : (value - mid) / (max - mid);
+    from = AMBER; to = GREEN;
+  }
+  t = Math.max(0, Math.min(1, t));
+  const rgb = from.map((c, i) => Math.round(c + (to[i] - c) * t));
+  return 'background:rgb(' + rgb.join(',') + ');font-weight:600;color:#1C1917';
 }
 
-function renderDistrictTable(dt, gt) {
+function renderDistrictTable(dt, gt, prorataFactor) {
   document.getElementById('districtTitle').textContent =
     'Revenue by District (' + dt.length + (dt.length === 1 ? ' district' : ' districts') + ' with data)';
   document.querySelector('#districtTable thead').innerHTML =
     '<tr><th>District</th><th>23-24</th><th>24-25</th><th>25-26</th><th>26-27</th><th>Total Qty</th>' +
-    '<th>Distinct BAs</th><th>23\u219224</th><th>24\u219225</th><th>25\u219226</th></tr>';
+    '<th>Distinct BAs</th><th>23\u219224</th><th>24\u219225</th><th>25\u219226 (pro-rata)</th></tr>';
+  const g1 = dt.map(d => d.growth[0]), g2 = dt.map(d => d.growth[1]), g3 = dt.map(d => d.growth[2]);
   document.querySelector('#districtTable tbody').innerHTML = dt.map(d => '<tr>' +
     '<td>' + escapeHtml(d.district) + '</td>' +
     d.qty.map(q => '<td class="num">' + fmt(q) + '</td>').join('') +
     '<td class="num">' + fmt(d.totalQty) + '</td>' +
     '<td class="num">' + fmt(d.dcTotal) + '</td>' +
-    d.growth.map(g => '<td class="num ' + pctClass(g) + '">' + fmtPct(g) + '</td>').join('') +
+    '<td class="num heat-cell" style="' + heatStyle(d.growth[0], g1) + '">' + fmtPct(d.growth[0]) + '</td>' +
+    '<td class="num heat-cell" style="' + heatStyle(d.growth[1], g2) + '">' + fmtPct(d.growth[1]) + '</td>' +
+    '<td class="num heat-cell" style="' + heatStyle(d.growth[2], g3) + '">' + fmtPct(d.growth[2]) + '</td>' +
     '</tr>').join('');
+  const gtGrowth = prorataGrowth(gt.qty[2], gt.qty[3], prorataFactor);
   document.querySelector('#districtTable tfoot').innerHTML = '<tr><td>Grand Total</td>' +
     gt.qty.map(q => '<td class="num">' + fmt(q) + '</td>').join('') +
-    '<td class="num">' + fmt(gt.totalQty) + '</td><td></td><td></td><td></td><td></td></tr>';
+    '<td class="num">' + fmt(gt.totalQty) + '</td><td></td><td></td><td></td>' +
+    '<td class="num">' + fmtPct(gtGrowth) + '</td></tr>';
 }
 
 function renderLocalityTable(locs) {
