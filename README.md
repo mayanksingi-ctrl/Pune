@@ -1,25 +1,24 @@
-# Gujarat District Summary — web dashboard
+# Pune City Summary — web dashboard
 
-Same architecture as the Pune dashboard, built for Gujarat's richer data —
-Gujarat's Detailed Sheet has the Focus Accounts / KOP-Q2 / RSM Review /
-leads extract all joined in, so this dashboard shows the full process-input
-compliance table with real numbers, not N/A.
+Same approach as the Gujarat dashboard, scoped to Pune only. This is
+deliberately a **simpler** dashboard than Gujarat's — Pune's source data was
+never joined to Focus Accounts, KOP-Q2, RSM Review, or the leads extract, so
+there is no coverage / scheme-points / pro-rata section here. What's below
+reflects exactly what exists in the Pune data, nothing invented to match
+Gujarat's feature list.
 
 ## What's inside
 
 - `index.html` — the dashboard page
-- `gujarat_logic.js` — the calculation engine (filtering, aggregation),
-  kept separate so it can be tested independently of the browser
-- `Gujarat_Summary_Data.xlsx` — the data source. **Edit this directly**
-  (the "Detailed Sheet" tab) and refresh the browser — no rebuild step.
-- `Gujarat_Hotspot_Map.html` — the interactive Gujarat hotspot map,
-  embedded inline
-- `gujarat_developers.json` — developer-by-locality lookup, extracted from
-  the Developers tab in the xlsx
+- `pune_logic.js` — the calculation engine (filtering, aggregation), kept
+  separate so it can be tested independently, same as Gujarat's
+- `Pune_Summary_Data.xlsx` — the data source. **Edit this directly** (the
+  "Detailed Sheet-Pune" tab) and refresh the browser — no rebuild needed.
+- `Pune_Hotspot_Map_v2.html` — the interactive Pune hotspot map, embedded inline.
 
 ## Running it
 
-Same rule as the Pune package: **double-clicking `index.html` will not
+Same rule as the Gujarat package: **double-clicking `index.html` will not
 work.** Browsers block local file reads for security. Serve the folder with
 a one-line local server:
 
@@ -39,58 +38,88 @@ npx serve .
 
 ## What's shown
 
-- **Filters:** Zone, BA Type, BA Segment, Loyalty, Focus Account, KOP
-  Account, Locality Category, Locality, Focus Coverage — the same nine
-  filters as the Excel version. Locality is a single-select dropdown that
-  narrows to whichever Locality Category is picked, matching the decision
-  made earlier in this project to simplify away from a checkbox-based
-  multi-select.
-- **FY26-27 pro-rata comparison** — same mechanism as the Excel workbook.
-  The 25-26 → 26-27 growth column compares 26-27's actual figure against a
-  pro-rated slice of 25-26 (assuming even monthly spread) rather than the
-  full year, since 26-27 is still a partial year. Edit the "data captured
-  through" date to match your actual cutoff; recalculates live.
-- **Revenue by District** — all 29 districts, with growth% columns shown as
-  a genuine heat-map background gradient (red → amber → green).
-- **Focus account dependence** and **KOP account dependence** — the same
-  live diagnostic blocks as the Excel Summary sheet, year by year.
-- **BA Segment process-input compliance** — Focus Accounts, Covered,
-  Coverage %, Scheme Points Achieved/Target/%, and Leads, computed live
-  from the real Focus/KOP-Q2/RSM/leads join in the Detailed Sheet.
-- **Developers by locality** — always visible, shows what's been pulled so
-  far (currently 2 of 688 localities: Vesu, Adajan) plus locality-specific
-  detail when you pick one in the filter bar.
-- **Map** — the existing interactive Gujarat hotspot map, needs an internet
-  connection for its street tiles.
+- **Filters:** BA Type, BA Segment, Loyalty, Product Category, Locality
+  Category, Locality — matching the six filters on the original Pune Summary
+  sheet. There is no Zone filter, since Pune's data is scoped to a single
+  zone ("Pune City") already.
+- **Revenue by District** — Pune's data only has two districts (Pune,
+  Lonavala), so this table is small; it's kept for structural parity with
+  the Gujarat version.
+- **Top localities** — the more useful granularity for Pune, since almost
+  everything sits in "Pune" district. Shows the top 25 by sale quantity,
+  each tagged with its Locality Category (Hotspot High/Medium value, Area of
+  Interest, Not classified).
+- **BA Segment process-input reference** — segment, BA count, total qty,
+  *plus* a Sales Driver reference column (same framework as Gujarat's: Focus
+  account coverage, scheme point achievement, lead/specification), adapted
+  to Pune's own segment names. This is descriptive reference text only, not
+  a computed metric — same as how Gujarat's own Sales Driver column was
+  always a fixed list, not filter-driven. No Coverage %, Scheme Points, or
+  Leads columns, for the reason below.
+- **Developers** — appears once you pick a specific Locality in the filter
+  bar. Real data from the Developers tab in Pune_Summary_Data.xlsx, but very
+  sparse: only 4 of 315 localities have been pulled so far (Wakad, Katraj,
+  Ambegaon, Hinjewadi). Everything else correctly shows "not pulled yet"
+  rather than inventing data.
+- **Map** — the existing interactive Pune hotspot map. This had a genuine
+  bug (a JavaScript syntax error in its legend code, left over from an
+  earlier edit) that silently broke the *entire* map, not just the legend —
+  fixed and verified with `node --check` before this package was built.
 
-## Verified against established ground truth before publishing
+## What's deliberately NOT here, and why
 
-Every figure below was independently re-derived from the raw Detailed
-Sheet data and matched exactly against the numbers already established and
-verified in the Excel version of this project:
+Gujarat's dashboard has a Focus Account / KOP Account compliance section
+(coverage %, scheme points, leads-per-segment) and live Focus/KOP dependence
+diagnostics. **The process-input table now has the identical column
+structure as Gujarat's** (Focus Accounts, Covered, Coverage %, Scheme Points
+Achieved, Scheme Points Target, Scheme Points %, Leads) — but every one of
+those columns shows N/A for Pune, because the underlying source data was
+never collected for Pune: no Focus Accounts list, no KOP-Q2 target sheet,
+no RSM Review extract, no leads file.
 
-- Grand Total: 1,041,399
-- South Zone Grand Total: 478,375 (tested live via the Zone filter)
-- R1 segment: 500 Focus Accounts, 13 Covered, 2,439 of 9,000 scheme points,
-  19 leads
-- Focus account dependence shares: 78.4% / 85.7% / 88.6% / 87.1%
-  (23-24 through 26-27)
-- KOP account dependence shares: 7.5% / 10.2% / 18.1% / 15.5%
-- Pro-rata growth math cross-checked against the Excel workbook's own
-  pro-rata block
+One thing worth flagging explicitly: **a file called
+`Main-Pune_Branch_Summary.xlsx` does contain sheets named "Focus Accounts"
+and "KOP-Q2-Gujarat"**, which looks at first glance like exactly what's
+missing. On inspection, though, those sheets are an exact, unedited copy of
+Gujarat's own data — identical GSTINs, identical account names, identical
+KOP point targets, row for row. It's a leftover template artifact, not
+Pune-specific data, so it is deliberately not used here — using it would
+mean mislabeling Gujarat's real focus accounts as if they were Pune's,
+which is worse than showing nothing.
+
+If genuine Pune-equivalent versions of any of those four source files exist
+somewhere, send them and this table will compute real numbers instead of
+N/A, exactly the way it does for Gujarat.
+
+## Verified against known figures before publishing
+
+- Grand Total: 2,495,953 (matches the figure established when this project
+  first built the Pune summary)
+- Distinct BAs: 2,987
+- Segment totals sum exactly to the Grand Total
+- Filtering by segment (R1) and by locality (Wakad) both tested and matched
+  independently-computed values
+- Developer lookup tested against both a "pulled" locality (Wakad, Ambegaon)
+  and an "unpulled" one (Kalewadi) — both render correctly
+- Fixed a leftover bug in the map file: its initial view was centred on
+  Gujarat's coordinates (22.3, 72.7), not Pune's — corrected to Pune's own
+  coordinates (18.52, 73.85)
+- The growth% columns in the Revenue table use a genuine heat-map background
+  gradient, matching the Excel convention
+
+## Pro-rata growth (25-26 \u2192 26-27), same fix applied to the Gujarat workbook
+
+FY26-27 is a partial year, so comparing it directly against a full FY25-26
+year understates performance. The dashboard now has an editable "FY26-27
+data captured through" date; the 25-26 \u2192 26-27 growth column compares
+26-27's actual figure against a pro-rated slice of 25-26 (assuming even
+monthly spread) rather than the full year. Tested: with the default 20-Aug-2026
+date, Pune's raw (unadjusted) degrowth of -70.0% becomes a pro-rata-adjusted
+-23.0% \u2014 a materially different, more honest read of performance.
+Changing the date recalculates live.
 
 ## Updating the data
 
-Edit `Gujarat_Summary_Data.xlsx`'s "Detailed Sheet" tab directly (or the
-"Developers" tab for the developer lookup), save, refresh the browser.
-If you rename a column, update the matching field name near the top of
-`gujarat_logic.js`.
-
-## Known limitation
-
-Only the "Detailed Sheet" and "Developers" tabs are read directly. The RSM
-reconciliation sheets, KOP-Q2 sheet, and Focus Accounts sheet are not
-re-joined live in the browser — their results are already folded into
-Detailed Sheet's `KOP:`, `Focus:`, and `RSM:` columns from earlier work on
-this project, so editing those columns directly is the way to update that
-information here.
+Edit `Pune_Summary_Data.xlsx`'s "Detailed Sheet-Pune" tab directly, save,
+refresh the browser. If you rename a column, update the matching field name
+near the top of `pune_logic.js`.
