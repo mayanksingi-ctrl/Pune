@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pune City Summary</title>
+<title>Gujarat District Summary</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="pune_logic.js"></script>
+<script src="gujarat_logic.js"></script>
 <style>
   :root {
     --ink: #14213D; --ink-soft: #4A5568; --line: #E2E5EA; --paper: #FCFCFB; --panel: #FFFFFF;
@@ -63,11 +63,11 @@
 
 <div id="loadingOverlay" class="loading-overlay">
   <div class="spinner"></div>
-  <div id="loadingText">Loading Pune_Summary_Data.xlsx&hellip;</div>
+  <div id="loadingText">Loading Gujarat_Summary_Data.xlsx&hellip;</div>
 </div>
 
 <header>
-  <h1>Pune City Summary</h1>
+  <h1>Gujarat District Summary</h1>
   <div id="status"></div>
 </header>
 
@@ -97,24 +97,19 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2 id="localityTitle">Top localities</h2>
-    <div class="scroll-table">
-      <table id="localityTable"><thead></thead><tbody></tbody></table>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Focus account dependence</h2>
+      <div id="focusDep"></div>
+    </div>
+    <div class="card">
+      <h2>KOP account dependence</h2>
+      <div id="kopDep"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2 id="segmentTitle">BA Segment process-input table</h2>
-    <div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-bottom:8px">
-      Same column structure as Gujarat's process-input table. Sales Driver is a fixed reference list,
-      same as Gujarat's — it doesn't change with the filters. Focus Accounts, Covered, Coverage %,
-      Scheme Points, and Leads all show N/A: Pune's data was never joined to a Focus Accounts / KOP-Q2 /
-      RSM extract the way Gujarat's was, and a file that looked like it might have this
-      (Main-Pune_Branch_Summary.xlsx) turned out, on inspection, to contain an exact unedited copy of
-      Gujarat's own Focus Accounts and KOP-Q2 data rather than anything Pune-specific — so it isn't
-      used here. See the README for detail.
-    </div>
+    <h2 id="segmentTitle">BA Segment process-input compliance</h2>
     <div class="scroll-table">
       <table id="segmentTable"><thead></thead><tbody></tbody></table>
     </div>
@@ -127,27 +122,31 @@
 
   <div class="card">
     <h2>Where the listing hotspots are</h2>
-    <div class="map-frame"><iframe src="Pune_Hotspot_Map_v2.html" title="Pune hotspot map"></iframe></div>
+    <div class="map-frame"><iframe src="Gujarat_Hotspot_Map.html" title="Gujarat hotspot map"></iframe></div>
     <div class="map-note">Interactive map — pan, zoom, and toggle layers. Needs an internet connection to load street tiles.</div>
   </div>
 </main>
 
 <script>
-const DATA_FILE = 'Pune_Summary_Data.xlsx';
-const SHEET_NAME = 'Detailed Sheet-Pune';
+const DATA_FILE = 'Gujarat_Summary_Data.xlsx';
+const SHEET_NAME = 'Detailed Sheet';
 const HEADER_ROW = 2;
-const DEV_FILE = 'pune_developers.json';
+const DEV_FILE = 'gujarat_developers.json';
 
 let ROWS = [];
 let DEV_DATA = [];
-const state = { baType: '(All)', segment: '(All)', loyalty: '(All)', productCategory: '(All)',
-                localityCategory: '(All)', locality: '(All)' };
+const state = { zone: '(All)', baType: '(All)', segment: '(All)', loyalty: '(All)',
+                focusAccount: '(All)', kopAccount: '(All)', localityCategory: '(All)',
+                selectedLocalities: [], focusCoverage: '(All)' };
 
 const LISTS = {
-  baType: ['(All)', 'OEM', 'Projects', 'Retail'],
-  loyalty: ['(All)', 'High Loyalty', 'Low Loyalty'],
-  productCategory: ['(All)', 'CAL+', 'LAM', 'Flex', 'SLC+', 'SLC', 'Liner & Other'],
-  localityCategory: ['(All)', 'Hotspot - High value', 'Hotspot - Medium value', 'Area of Interest', 'Not classified'],
+  zone: ['(All)', 'North Zone', 'Central Zone', 'South Zone', 'West Zone'],
+  baType: ['(All)', 'OEM', 'Project', 'Retail'],
+  loyalty: ['(All)', 'High Loyalty', 'Medium Loyalty', 'Low Loyalty', '(Blank)'],
+  yesNo: ['(All)', 'Yes', 'No'],
+  localityCategory: ['(All)', 'Hotspot - High value', 'Hotspot - Medium value', 'Hotspot - Low value',
+                      'Area of Interest', 'Not classified'],
+  coverage: ['(All)', 'Yes', 'No', 'n/a'],
 };
 let SEGMENTS = ['(All)'];
 let LOCALITIES = ['(All)'];
@@ -200,12 +199,31 @@ function escapeHtml(s) { const d = document.createElement('div'); d.textContent 
 function buildFilterBar() {
   const bar = document.getElementById('filterBar');
   bar.innerHTML = '';
+  bar.appendChild(makeSelect('zone', 'Zone', LISTS.zone));
   bar.appendChild(makeSelect('baType', 'BA Type', LISTS.baType));
   bar.appendChild(makeSelect('segment', 'BA Segment', SEGMENTS));
   bar.appendChild(makeSelect('loyalty', 'Loyalty', LISTS.loyalty));
-  bar.appendChild(makeSelect('productCategory', 'Product Category', LISTS.productCategory));
+  bar.appendChild(makeSelect('focusAccount', 'Focus Account', LISTS.yesNo));
+  bar.appendChild(makeSelect('kopAccount', 'KOP Account', LISTS.yesNo));
   bar.appendChild(makeSelect('localityCategory', 'Locality Category', LISTS.localityCategory));
-  bar.appendChild(makeSelect('locality', 'Locality', LOCALITIES));
+  bar.appendChild(makeLocalitySelect());
+  bar.appendChild(makeSelect('focusCoverage', 'Focus Coverage', LISTS.coverage));
+}
+
+function makeLocalitySelect() {
+  const wrap = document.createElement('div'); wrap.className = 'filter-item';
+  const lab = document.createElement('label'); lab.textContent = 'Locality';
+  const sel = document.createElement('select'); sel.setAttribute('aria-label', 'Locality');
+  LOCALITIES.forEach(o => {
+    const opt = document.createElement('option'); opt.value = o; opt.textContent = o;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => {
+    state.selectedLocalities = sel.value === '(All)' ? [] : [sel.value];
+    render();
+  });
+  wrap.appendChild(lab); wrap.appendChild(sel);
+  return wrap;
 }
 
 function makeSelect(key, label, options) {
@@ -242,30 +260,48 @@ function render() {
   const gt = grandTotal(dt);
   renderDistrictTable(dt, gt, prorataFactor);
 
-  renderLocalityTable(localityTable(filtered).slice(0, 25));
   renderSegmentTable(segmentTable(filtered));
+  renderDependence('focusDep', 'Focus account dependence (Sale Qty)', dependenceBlock(filtered, 'isFocus'));
+  renderDependence('kopDep', 'KOP account dependence (Sale Qty)', dependenceBlock(filtered, 'isKop'));
   renderDevPanel();
 }
 
+function renderDependence(elId, title, byYear) {
+  const years = ['23-24', '24-25', '25-26', '26-27'];
+  let html = '<table><thead><tr><th style="text-align:left">Year</th><th>Flagged</th><th>Other</th>' +
+    '<th>Total</th><th>Share</th></tr></thead><tbody>';
+  byYear.forEach((b, i) => {
+    html += '<tr><td style="text-align:left">' + years[i] + '</td>' +
+      '<td class="num">' + fmt(b.flagged) + '</td><td class="num">' + fmt(b.other) + '</td>' +
+      '<td class="num">' + fmt(b.total) + '</td>' +
+      '<td class="num ' + (b.share === null ? 'pct-grey' : '') + '" style="' +
+        (b.share !== null ? heatStyle(b.share, byYear.map(x => x.share)) : '') + '">' + fmtPct(b.share) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById(elId).innerHTML = html;
+}
+
 function renderDevPanel() {
+  const currentLocality = state.selectedLocalities[0];
   document.getElementById('devTitle').textContent =
-    state.locality === '(All)' ? 'Developers by locality (all localities pulled so far)'
-                                : 'Developers \u2014 ' + state.locality;
+    !currentLocality ? 'Developers by locality (all localities pulled so far)'
+                      : 'Developers \u2014 ' + currentLocality;
   const body = document.getElementById('devBody');
 
-  if (state.locality !== '(All)') {
-    const info = developersFor(state.locality, DEV_DATA);
+  if (currentLocality) {
+    const info = developersFor(currentLocality, DEV_DATA);
     if (!info || !info.pulled) {
       body.innerHTML = '<div style="color:var(--ink-soft);font-style:italic;font-size:13px">' +
-        'Not pulled yet for "' + escapeHtml(state.locality) + '" \u2014 see the full list of what has been ' +
-        'pulled below, or add more in Pune_Summary_Data.xlsx\'s Developers tab and refresh.</div>';
+        'Not pulled yet for "' + escapeHtml(currentLocality) + '" \u2014 see the full list of what has been ' +
+        'pulled below, or add more in Gujarat_Summary_Data.xlsx\'s Developers tab and refresh.</div>';
     } else {
       body.innerHTML = '<ol style="margin:0 0 14px;padding-left:20px;font-size:13px">' +
         info.devs.map(d => '<li>' + escapeHtml(d) + '</li>').join('') + '</ol>';
     }
+  } else {
+    body.innerHTML = '';
   }
 
-  // always show the full list of what has been pulled so far, regardless of the Locality filter
   const pulled = DEV_DATA.filter(d => d.devs && d.devs.length > 0);
   if (pulled.length === 0) {
     body.innerHTML += '<div style="color:var(--ink-soft);font-style:italic;font-size:13px">' +
@@ -278,12 +314,16 @@ function renderDevPanel() {
       '</td><td style="text-align:left">' + escapeHtml(d.devs.join(', ')) + '</td></tr>').join('') +
     '</tbody></table>' +
     '<div style="color:var(--ink-soft);font-style:italic;font-size:12px;margin-top:8px">' +
-    pulled.length + ' of ' + DEV_DATA.length + ' Pune localities pulled so far. Add more in the Developers tab ' +
-    'of Pune_Summary_Data.xlsx and refresh \u2014 no code change needed.</div>';
+    pulled.length + ' of ' + DEV_DATA.length + ' Gujarat localities pulled so far. Add more in the Developers ' +
+    'tab of Gujarat_Summary_Data.xlsx and refresh \u2014 no code change needed.</div>';
 }
 
 function describeState() {
-  const parts = Object.values(state).filter(v => v !== '(All)');
+  const parts = [];
+  Object.entries(state).forEach(([k, v]) => {
+    if (k === 'selectedLocalities') { if (v.length) parts.push(v[0]); return; }
+    if (v !== '(All)') parts.push(v);
+  });
   return parts.length ? parts.join(' \u00b7 ') : 'everything (no filters applied)';
 }
 
@@ -350,21 +390,19 @@ function renderLocalityTable(locs) {
 
 function renderSegmentTable(seg) {
   document.querySelector('#segmentTable thead').innerHTML =
-    '<tr><th>Segment</th><th>Sales Driver (reference)</th><th>BAs</th><th>Total Qty</th>' +
-    '<th>Focus Accounts</th><th>Covered</th><th>Coverage %</th>' +
+    '<tr><th>Segment</th><th>Sales Driver</th><th>Focus Accounts</th><th>Covered</th><th>Coverage %</th>' +
     '<th>Scheme Pts Achieved</th><th>Scheme Pts Target</th><th>Scheme Pts %</th><th>Leads</th></tr>';
+  const covPcts = seg.map(s => s.coveragePct), ptsPcts = seg.map(s => s.pointsPct);
   document.querySelector('#segmentTable tbody').innerHTML = seg.map(s => '<tr>' +
     '<td>' + escapeHtml(s.segment) + '</td>' +
     '<td style="text-align:left;color:var(--ink-soft);font-size:12px;white-space:normal;max-width:220px">' + escapeHtml(s.driver) + '</td>' +
-    '<td class="num">' + fmt(s.baCount) + '</td>' +
-    '<td class="num">' + fmt(s.totalQty) + '</td>' +
-    '<td class="num" title="No Focus Accounts source for Pune">N/A</td>' +
-    '<td class="num" title="No Focus Accounts source for Pune">N/A</td>' +
-    '<td class="num pct-grey" title="No Focus Accounts source for Pune">N/A</td>' +
-    '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
-    '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
-    '<td class="num pct-grey" title="No KOP-Q2 source for Pune">N/A</td>' +
-    '<td class="num" title="No leads extract for Pune">N/A</td>' +
+    '<td class="num">' + fmt(s.focusAccounts) + '</td>' +
+    '<td class="num">' + fmt(s.covered) + '</td>' +
+    '<td class="num heat-cell" style="' + heatStyle(s.coveragePct, covPcts) + '">' + fmtPct(s.coveragePct) + '</td>' +
+    '<td class="num">' + (s.kopTarget ? fmt(s.kopAchieved) : '\u2013') + '</td>' +
+    '<td class="num">' + (s.kopTarget ? fmt(s.kopTarget) : '\u2013') + '</td>' +
+    '<td class="num heat-cell" style="' + (s.pointsPct !== null ? heatStyle(s.pointsPct, ptsPcts) : '') + '">' + fmtPct(s.pointsPct) + '</td>' +
+    '<td class="num">' + (s.leads ? fmt(s.leads) : '\u2013') + '</td>' +
     '</tr>').join('');
 }
 
