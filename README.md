@@ -140,6 +140,34 @@ date, Pune's raw (unadjusted) degrowth of -70.0% becomes a pro-rata-adjusted
 -23.0% \u2014 a materially different, more honest read of performance.
 Changing the date recalculates live.
 
+## Leads data added (from Pune_Leads_working_copy.xlsx)
+
+The uploaded leads file has three sheets. Only one could be reliably joined
+to specific BAs:
+
+- **"Supplier wise Leads of Humrahi"** is keyed by GSTIN — joined directly
+  against BA GSTIN in Detailed Sheet-Pune. 90 of the sheet's 111 GSTINs
+  matched an actual Pune BA (the rest presumably belong to other
+  branches/cities); those 90 BAs' lead counts are now in Detailed Sheet-Pune
+  as new "Leads Generated" / "Leads Source" columns, and the segment table's
+  Leads column shows real numbers for the first time (288 total across the
+  90 matched BAs).
+- **"Humrahi Leads as peraccountUser"** and **"Emeraldz Lead as per contact
+  Mb"** are keyed by Salesforce Account ID and mostly list individual
+  contacts (architects, interior designers) rather than BAs directly. Name
+  matching against BA Name found only ~4% overlap even after normalizing
+  for case and punctuation — not reliable enough to attribute to specific
+  BAs without an Account ID → BA GSTIN crosswalk, which doesn't exist for
+  Pune. These two sheets are not joined in. If a crosswalk exists, send it
+  and these ~850 additional contact-based leads can be added the same way.
+
+A technical note worth knowing: 90 distinct GSTINs appear on 444 separate
+rows in Detailed Sheet-Pune (a BA can have one row per year/product line).
+The lead count is attributed once per distinct BA GSTIN, not once per row,
+so it can't be double- or quadruple-counted by summing the column directly
+in Excel — the dashboard's own aggregation handles this correctly, but a
+manual SUM() over the raw column would overstate the total.
+
 ## Updating the data
 
 Edit `Pune_Summary_Data.xlsx`'s "Detailed Sheet-Pune" tab directly, save,

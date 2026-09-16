@@ -17,6 +17,7 @@ function prepareRows(raw) {
     loyalty: r['Loyalty'] || '(Blank)',
     productCategory: r['Brand MIS Group'],
     localityCategory: r['Locality Category'] || 'Not classified',
+    leads: toNum(r['Leads Generated']),
     y1: toNum(r['23-24']), y2: toNum(r['24-25']), y3: toNum(r['25-26']), y4: toNum(r['26-27']),
   }));
 }
@@ -136,26 +137,29 @@ const SEGMENT_DRIVERS = {
 function segmentTable(rows) {
   const bySeg = new Map();
   for (const r of rows) {
-    if (!bySeg.has(r.segment)) bySeg.set(r.segment, { segment: r.segment, gst: new Set(), qty: [0, 0, 0, 0] });
+    if (!bySeg.has(r.segment)) bySeg.set(r.segment, { segment: r.segment, gst: new Set(), qty: [0, 0, 0, 0], leadsByGst: new Map() });
     const d = bySeg.get(r.segment);
     d.gst.add(r.gstin);
     const ys = [r.y1, r.y2, r.y3, r.y4];
     ys.forEach((y, i) => { if (y !== null) d.qty[i] += y; });
+    // a BA can appear on multiple transaction rows (different years/product lines); its lead
+    // count is a per-BA figure from the source leads file, so it must be attributed once per
+    // distinct GSTIN here, never summed once per row, or it would be double- or triple-counted.
+    if (r.leads !== null) d.leadsByGst.set(r.gstin, r.leads);
   }
   const out = [];
   for (const d of bySeg.values()) {
     const totalQty = d.qty.reduce((a, b) => a + b, 0);
+    const leadsTotal = [...d.leadsByGst.values()].reduce((a, b) => a + b, 0);
     out.push({
       segment: d.segment, driver: SEGMENT_DRIVERS[d.segment] || '(no driver on file for this segment name)',
       baCount: d.gst.size, qty: d.qty, totalQty,
-      // Gujarat's table has these four measured from a Focus Accounts / KOP-Q2 / RSM Review /
-      // leads join that was never built for Pune - no such source exists (verified, including
-      // checking a file that superficially looked like it might: Main-Pune_Branch_Summary.xlsx's
-      // Focus Accounts and KOP-Q2 tabs turned out to be an exact, unedited copy of Gujarat's own
-      // data, not Pune's, so it is deliberately not used here). Columns kept for structural
-      // parity with Gujarat's table; values are honestly null rather than fabricated.
+      // Focus Accounts / Covered / Coverage% / Scheme Points columns still have no source for
+      // Pune (see README) - only Leads is now real, from the Humrahi supplier-side leads file
+      // (GSTIN-matched, 90 of 2,987 BAs), added after Focus/KOP/RSM were confirmed absent.
       focusAccounts: null, covered: null, coveragePct: null,
-      kopAchieved: null, kopTarget: null, pointsPct: null, leads: null,
+      kopAchieved: null, kopTarget: null, pointsPct: null,
+      leads: d.leadsByGst.size > 0 ? leadsTotal : null,
     });
   }
   out.sort((a, b) => b.totalQty - a.totalQty);

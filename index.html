@@ -111,11 +111,12 @@
     <h2 id="segmentTitle">BA Segment process-input table</h2>
     <div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-bottom:8px">
       Same column structure as Gujarat's process-input table. Sales Driver is a fixed reference list,
-      same as Gujarat's — it doesn't change with the filters. Focus Accounts, Covered, Coverage %,
-      Scheme Points, and Leads all show N/A: Pune's data was never joined to a Focus Accounts / KOP-Q2 /
-      RSM extract the way Gujarat's was, and a file that looked like it might have this
-      (Main-Pune_Branch_Summary.xlsx) turned out, on inspection, to contain an exact unedited copy of
-      Gujarat's own Focus Accounts and KOP-Q2 data rather than anything Pune-specific — so it isn't
+      same as Gujarat's — it doesn't change with the filters. Leads now shows real numbers, joined from
+      the Humrahi supplier-side leads file by GSTIN (90 of Pune's 2,987 BAs matched). Focus Accounts,
+      Covered, Coverage %, and Scheme Points still show N/A: Pune's data was never joined to a Focus
+      Accounts / KOP-Q2 / RSM extract the way Gujarat's was, and a file that looked like it might have
+      this (Main-Pune_Branch_Summary.xlsx) turned out, on inspection, to contain an exact unedited copy
+      of Gujarat's own Focus Accounts and KOP-Q2 data rather than anything Pune-specific — so it isn't
       used here. See the README for detail.
     </div>
     <div class="scroll-table">
@@ -423,7 +424,7 @@ function renderSegmentTable(seg) {
     '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num pct-grey" title="No KOP-Q2 source for Pune">N/A</td>' +
-    '<td class="num" title="No leads extract for Pune">N/A</td>' +
+    '<td class="num">' + (s.leads !== null ? fmt(s.leads) : '\u2013') + '</td>' +
     '</tr>').join('');
 }
 
