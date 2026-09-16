@@ -68,7 +68,10 @@
 
 <header>
   <h1>Pune City Summary</h1>
-  <div id="status"></div>
+  <div style="text-align:right">
+    <div id="status"></div>
+    <div style="font-size:10px;color:var(--ink-soft)">build 2026-09-15-c</div>
+  </div>
 </header>
 
 <div class="filters" id="filterBar"></div>
@@ -151,6 +154,7 @@ const LISTS = {
 };
 let SEGMENTS = ['(All)'];
 let LOCALITIES = ['(All)'];
+let LOCALITIES_BY_CATEGORY = {};
 
 async function init() {
   try {
@@ -172,6 +176,14 @@ async function init() {
     const locCounts = new Map();
     ROWS.forEach(r => locCounts.set(r.cluster, (locCounts.get(r.cluster) || 0) + 1));
     LOCALITIES = ['(All)', ...[...locCounts.keys()].sort()];
+    LOCALITIES_BY_CATEGORY = {};
+    ROWS.forEach(r => {
+      if (!LOCALITIES_BY_CATEGORY[r.localityCategory]) LOCALITIES_BY_CATEGORY[r.localityCategory] = new Set();
+      LOCALITIES_BY_CATEGORY[r.localityCategory].add(r.cluster);
+    });
+    Object.keys(LOCALITIES_BY_CATEGORY).forEach(k => {
+      LOCALITIES_BY_CATEGORY[k] = [...LOCALITIES_BY_CATEGORY[k]].sort();
+    });
     buildFilterBar();
     document.getElementById('asOfDate').addEventListener('change', render);
     render();
@@ -204,20 +216,64 @@ function buildFilterBar() {
   bar.appendChild(makeSelect('segment', 'BA Segment', SEGMENTS));
   bar.appendChild(makeSelect('loyalty', 'Loyalty', LISTS.loyalty));
   bar.appendChild(makeSelect('productCategory', 'Product Category', LISTS.productCategory));
-  bar.appendChild(makeSelect('localityCategory', 'Locality Category', LISTS.localityCategory));
-  bar.appendChild(makeSelect('locality', 'Locality', LOCALITIES));
+  // Locality options depend on which Locality Category is selected, so this select
+  // takes an extra onChange callback (attached directly, not found later via
+  // querySelector) that rebuilds the Locality dropdown's own option list.
+  bar.appendChild(makeSelect('localityCategory', 'Locality Category', LISTS.localityCategory, refreshLocalityOptions));
+  bar.appendChild(makeSelect('locality', 'Locality', localitiesForCurrentCategory(), null, 'localitySelect'));
+  refreshLocalityLabel();
 }
 
-function makeSelect(key, label, options) {
+function localityLabelText() {
+  const opts = localitiesForCurrentCategory().filter(o => o !== '(All)');
+  return 'Locality (' + opts.length + (opts.length === 1 ? ' option' : ' options') +
+    (state.localityCategory === '(All)' ? '' : ' in category') + ')';
+}
+function refreshLocalityLabel() {
+  const lab = document.getElementById('localityLabel');
+  if (lab) lab.textContent = localityLabelText();
+}
+
+function localitiesForCurrentCategory() {
+  if (state.localityCategory === '(All)') return LOCALITIES;
+  return ['(All)', ...(LOCALITIES_BY_CATEGORY[state.localityCategory] || [])];
+}
+
+function refreshLocalityOptions() {
+  const sel = document.getElementById('localitySelect');
+  if (!sel) return;
+  const options = localitiesForCurrentCategory();
+  refreshLocalityLabel();
+  const currentSelection = state.locality;
+  const stillValid = options.includes(currentSelection);
+  sel.innerHTML = '';
+  options.forEach(o => {
+    const opt = document.createElement('option'); opt.value = o; opt.textContent = o;
+    if (stillValid && o === currentSelection) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  if (!stillValid) {
+    state.locality = '(All)';
+    render();
+  }
+}
+
+function makeSelect(key, label, options, onChangeExtra, selectId) {
   const wrap = document.createElement('div'); wrap.className = 'filter-item';
   const lab = document.createElement('label'); lab.textContent = label;
+  if (selectId) lab.id = selectId + 'Label';
   const sel = document.createElement('select'); sel.setAttribute('aria-label', label);
+  if (selectId) sel.id = selectId;
   options.forEach(o => {
     const opt = document.createElement('option'); opt.value = o; opt.textContent = o;
     if (state[key] === o) opt.selected = true;
     sel.appendChild(opt);
   });
-  sel.addEventListener('change', () => { state[key] = sel.value; render(); });
+  sel.addEventListener('change', () => {
+    state[key] = sel.value;
+    render();
+    if (onChangeExtra) onChangeExtra();
+  });
   wrap.appendChild(lab); wrap.appendChild(sel);
   return wrap;
 }
@@ -292,13 +348,16 @@ function fmtPct(p) { return p === null || p === undefined ? '\u2013' : (p * 100)
 
 // true heat-map gradient: red -> amber -> green, interpolated by the value's position
 // between the min and max of the CURRENT set of values (same idea as Excel's 3-colour scale)
-function heatStyle(value, allValues) {
+function heatStyle(value, allValues, fixedMid) {
   if (value === null || value === undefined) return '';
   const vals = allValues.filter(v => v !== null && v !== undefined);
   if (vals.length < 2) return '';
   const min = Math.min(...vals), max = Math.max(...vals);
   if (min === max) return '';
-  const mid = 0 >= min && 0 <= max ? 0 : (min + max) / 2;
+  // fixedMid=0 anchors the scale at the true zero point (e.g. for growth/degrowth), so a
+  // negative value can never render as green just because it's the "least bad" in the set -
+  // otherwise the midpoint floats to the relative middle of whatever values are on screen.
+  const mid = fixedMid !== undefined ? fixedMid : (0 >= min && 0 <= max ? 0 : (min + max) / 2);
   const RED = [217, 83, 79], AMBER = [255, 214, 92], GREEN = [92, 184, 120];
   let t, from, to;
   if (value <= mid) {
@@ -325,9 +384,9 @@ function renderDistrictTable(dt, gt, prorataFactor) {
     d.qty.map(q => '<td class="num">' + fmt(q) + '</td>').join('') +
     '<td class="num">' + fmt(d.totalQty) + '</td>' +
     '<td class="num">' + fmt(d.dcTotal) + '</td>' +
-    '<td class="num heat-cell" style="' + heatStyle(d.growth[0], g1) + '">' + fmtPct(d.growth[0]) + '</td>' +
-    '<td class="num heat-cell" style="' + heatStyle(d.growth[1], g2) + '">' + fmtPct(d.growth[1]) + '</td>' +
-    '<td class="num heat-cell" style="' + heatStyle(d.growth[2], g3) + '">' + fmtPct(d.growth[2]) + '</td>' +
+    '<td class="num heat-cell" style="' + heatStyle(d.growth[0], g1, 0) + '">' + fmtPct(d.growth[0]) + '</td>' +
+    '<td class="num heat-cell" style="' + heatStyle(d.growth[1], g2, 0) + '">' + fmtPct(d.growth[1]) + '</td>' +
+    '<td class="num heat-cell" style="' + heatStyle(d.growth[2], g3, 0) + '">' + fmtPct(d.growth[2]) + '</td>' +
     '</tr>').join('');
   const gtGrowth = prorataGrowth(gt.qty[2], gt.qty[3], prorataFactor);
   document.querySelector('#districtTable tfoot').innerHTML = '<tr><td>Grand Total</td>' +

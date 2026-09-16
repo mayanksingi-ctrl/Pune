@@ -91,6 +91,28 @@ If genuine Pune-equivalent versions of any of those four source files exist
 somewhere, send them and this table will compute real numbers instead of
 N/A, exactly the way it does for Gujarat.
 
+## Checking you're on the current build
+
+The bottom-right of the page header shows a small "build" date/letter (e.g.
+"build 2026-09-15-c"). If a fix described in this README doesn't seem to
+be there, check that marker first — a hard refresh (Ctrl/Cmd+Shift+R) or
+clearing the browser cache for localhost will usually resolve it, since
+this is otherwise identical to a previous build with the same file names.
+
+## Fixed since first published
+
+The growth% heat map coloring had a bug: it scaled colors relative to
+whichever min/max happened to be in the current filtered view, so if every
+visible district had negative growth, the "least negative" one could still
+render green. Fixed to anchor the color scale at a true 0% — negative
+values now always render somewhere in the red-to-amber range, never green.
+
+Also: the Locality dropdown didn't narrow when you picked a Locality
+Category — it always showed the full list of ~315 localities regardless.
+Fixed to rebuild its options against the selected category (and reset to
+"(All)" if your previous pick isn't valid in the new category). Confirmed:
+"Hotspot - High value" now correctly narrows to just Wakad.
+
 ## Verified against known figures before publishing
 
 - Grand Total: 2,495,953 (matches the figure established when this project
