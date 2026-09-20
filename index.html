@@ -130,6 +130,24 @@
   </div>
 
   <div class="card">
+    <h2>Sales Officer performance (from Project Review Data - West II)</h2>
+    <div style="font-size:11px;color:var(--ink-soft);font-style:italic;margin-bottom:8px">
+      Static reference, not filter-driven. Filtered to Branch = Pune (26 of 43 West II rows). "Visit Ach%" and
+      "Focus Ach%" are the source file's own PJP-based coverage percentages; "Sep'26 Ach%" is calculated here
+      as Sep'26 Achievement &divide; Sep'26 Target. Unlike Gujarat, there is no Zone breakdown here \u2014
+      Pune has no Focus Accounts / Account Manager sheet to derive one from.
+    </div>
+    <div class="scroll-table">
+      <table id="soTable">
+        <thead><tr><th>SO Name</th><th>Designation</th><th>All Accounts</th><th>Total Visits (PJP)</th>
+          <th>Visit Ach%</th><th>Focus Accounts</th><th>Focus Visits (PJP)</th><th>Focus Ach%</th>
+          <th>Sep'26 Target</th><th>Sep'26 Ach</th><th>Sep'26 Ach%</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Where the listing hotspots are</h2>
     <div class="map-frame"><iframe src="Pune_Hotspot_Map_v2.html" title="Pune hotspot map"></iframe></div>
     <div class="map-note">Interactive map — pan, zoom, and toggle layers. Needs an internet connection to load street tiles.</div>
@@ -141,9 +159,11 @@ const DATA_FILE = 'Pune_Summary_Data.xlsx';
 const SHEET_NAME = 'Detailed Sheet-Pune';
 const HEADER_ROW = 2;
 const DEV_FILE = 'pune_developers.json';
+const SO_FILE = 'pune_so_performance.json';
 
 let ROWS = [];
 let DEV_DATA = [];
+let SO_DATA = [];
 const state = { baType: '(All)', segment: '(All)', loyalty: '(All)', productCategory: '(All)',
                 localityCategory: '(All)', locality: '(All)' };
 
@@ -166,6 +186,10 @@ async function init() {
       const devRes = await fetch(DEV_FILE);
       DEV_DATA = devRes.ok ? await devRes.json() : [];
     } catch (e) { DEV_DATA = []; }
+    try {
+      const soRes = await fetch(SO_FILE);
+      SO_DATA = soRes.ok ? await soRes.json() : [];
+    } catch (e) { SO_DATA = []; }
     setLoading('Parsing workbook\u2026');
     const wb = XLSX.read(buf, { type: 'array' });
     const ws = wb.Sheets[SHEET_NAME];
@@ -302,6 +326,25 @@ function render() {
   renderLocalityTable(localityTable(filtered).slice(0, 25));
   renderSegmentTable(segmentTable(filtered));
   renderDevPanel();
+  renderSOPerformance();
+}
+
+function renderSOPerformance() {
+  const tbody = document.querySelector('#soTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = SO_DATA.map(so => '<tr>' +
+    '<td>' + escapeHtml(so.name) + '</td>' +
+    '<td style="text-align:left">' + escapeHtml(so.designation || '') + '</td>' +
+    '<td class="num">' + fmt(so.allAccounts) + '</td>' +
+    '<td class="num">' + fmt(so.visits) + '</td>' +
+    '<td class="num">' + fmtPct(so.visitAch) + '</td>' +
+    '<td class="num">' + fmt(so.focusAccounts) + '</td>' +
+    '<td class="num">' + fmt(so.focusVisits) + '</td>' +
+    '<td class="num">' + fmtPct(so.focusAch) + '</td>' +
+    '<td class="num">' + fmt(so.sepTarget) + '</td>' +
+    '<td class="num">' + fmt(so.sepAch) + '</td>' +
+    '<td class="num heat-cell" style="' + (so.sepAchPct !== null ? heatStyle(so.sepAchPct, SO_DATA.map(s=>s.sepAchPct).filter(v=>v!==null)) : '') + '">' + fmtPct(so.sepAchPct) + '</td>' +
+    '</tr>').join('');
 }
 
 function renderDevPanel() {
@@ -412,19 +455,21 @@ function renderSegmentTable(seg) {
   document.querySelector('#segmentTable thead').innerHTML =
     '<tr><th>Segment</th><th>Sales Driver (reference)</th><th>BAs</th><th>Total Qty</th>' +
     '<th>Focus Accounts</th><th>Covered</th><th>Coverage %</th>' +
-    '<th>Scheme Pts Achieved</th><th>Scheme Pts Target</th><th>Scheme Pts %</th><th>Leads</th></tr>';
+    '<th>Scheme Pts Achieved</th><th>Scheme Pts Target</th><th>Scheme Pts %</th><th>Leads</th>' +
+    '<th>RSM Qty (Sep 26 YTD)</th></tr>';
   document.querySelector('#segmentTable tbody').innerHTML = seg.map(s => '<tr>' +
     '<td>' + escapeHtml(s.segment) + '</td>' +
     '<td style="text-align:left;color:var(--ink-soft);font-size:12px;white-space:normal;max-width:220px">' + escapeHtml(s.driver) + '</td>' +
     '<td class="num">' + fmt(s.baCount) + '</td>' +
     '<td class="num">' + fmt(s.totalQty) + '</td>' +
-    '<td class="num" title="No Focus Accounts source for Pune">N/A</td>' +
-    '<td class="num" title="No Focus Accounts source for Pune">N/A</td>' +
-    '<td class="num pct-grey" title="No Focus Accounts source for Pune">N/A</td>' +
+    '<td class="num" title="Default = accounts appearing in RSM_Review_Master (West II), GSTIN-matched">' + fmt(s.focusAccounts) + '</td>' +
+    '<td class="num" title="Equals Focus Accounts by construction - inclusion in the RSM extract requires billing">' + fmt(s.covered) + '</td>' +
+    '<td class="num" title="100% wherever any Focus Accounts exist - a direct result of the definition, not separately measured">' + fmtPct(s.coveragePct) + '</td>' +
     '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num pct-grey" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num">' + (s.leads !== null ? fmt(s.leads) : '\u2013') + '</td>' +
+    '<td class="num">' + (s.rsmQty !== null ? fmt(s.rsmQty) : '\u2013') + '</td>' +
     '</tr>').join('');
 }
 

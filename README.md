@@ -168,6 +168,67 @@ so it can't be double- or quadruple-counted by summing the column directly
 in Excel — the dashboard's own aggregation handles this correctly, but a
 manual SUM() over the raw column would overstate the total.
 
+## Sales Officer performance added (from Proejct_Review_Data___West_II.xlsx)
+
+A new section shows Sales Officer / Branch performance for Pune — 26 SOs,
+filtered from the West II upload's 43 rows to Branch = Pune. Static
+reference, not filter-driven (visit/pipeline targets aren't something that
+logically filters by BA Segment or Locality). Columns: All Accounts, Total
+Visits, Visit Ach% (the file's own PJP-based metric), Focus Accounts, Focus
+Visits, Focus Ach%, and Sep'26 Target/Achievement/Ach% (the last calculated
+here as Achievement ÷ Target). Sorted by Sep'26 Ach% descending, same
+heat-map treatment as the rest of the dashboard.
+
+Gujarat's equivalent section derives a Zone for each SO by matching their
+name to an Account Manager in the Focus Accounts sheet. That's not possible
+here — Pune has no Focus Accounts / Account Manager sheet to derive a Zone
+from — so this section has no geographic breakdown. Noted directly on the
+card so it isn't mistaken for an oversight.
+
+## RSM Tracked / RSM Qty added (from RSM_Review_Master___West_II.xlsx)
+
+New "RSM Tracked" and "RSM Qty (Sep 26 YTD)" columns in the segment table —
+44 of Pune's 2,987 BAs appear in this extract, matched by GSTIN (99.95% GST
+fill rate in the source file). Sale Qty totals sum exactly to 138,719 across
+those 44 accounts.
+
+**This is genuinely different from Gujarat's Focus Coverage, not just a
+renamed version of it — worth understanding why.** Gujarat's Focus Coverage
+answers "of the accounts we already designated as Focus targets, how many
+are actually billing?" — it requires a Focus Accounts list to know who was
+targeted in the first place. Pune has no such list, so there's no way to
+know which accounts were ever meant to be a focus. "RSM Tracked" only
+answers "which accounts happen to appear in RSM's own extract?" — it says
+nothing about whether they were targeted or not. A high RSM Tracked count
+doesn't mean good focus coverage; it just means those accounts showed up
+in this particular dataset.
+
+One more caveat worth flagging: the source file labels its current-period
+data "FY25~26", which is confirmed (via an exact match on a known Gujarat
+account) to actually correspond to this project's 26-27 year — a labeling
+quirk in the source RSM system, not an error. That calibration is assumed
+to hold for this Pune/West II file too, since it's the same source system,
+but wasn't independently re-verified with the same precision for Pune
+specifically (no equivalent exact-match test case was available).
+
+## Focus Accounts / Covered / Coverage % now populated (by instruction)
+
+By explicit instruction, the 44 Pune BAs appearing in RSM_Review_Master
+(West II, GSTIN-matched) are now treated as this dashboard's default Focus
+Accounts list. Focus Accounts, Covered, and Coverage % show real numbers
+for the first time — 44 total, matching the count established when this
+data was first added.
+
+Worth understanding precisely what this means: since inclusion in the RSM
+extract requires actual confirmed billing, **Covered always equals Focus
+Accounts, and Coverage % is 100% for every segment with any Focus
+Accounts** — this is a direct, mechanical consequence of the definition
+("focus" and "covered" are the same 44 accounts by construction), not a
+separately measured result the way Gujarat's Coverage % is (where Focus
+Accounts and billing coverage come from two independent sources and can
+genuinely differ). Scheme Points columns remain N/A — there's still no
+KOP-Q2-style target file for Pune to compute those from.
+
 ## Updating the data
 
 Edit `Pune_Summary_Data.xlsx`'s "Detailed Sheet-Pune" tab directly, save,

@@ -18,6 +18,8 @@ function prepareRows(raw) {
     productCategory: r['Brand MIS Group'],
     localityCategory: r['Locality Category'] || 'Not classified',
     leads: toNum(r['Leads Generated']),
+    rsmTracked: r['Focus: GSTIN (default = RSM_Review_Master West II tracked accounts)'] === 'Yes',
+    rsmQty: toNum(r['RSM: Sale Qty (Sep 26 YTD)']),
     y1: toNum(r['23-24']), y2: toNum(r['24-25']), y3: toNum(r['25-26']), y4: toNum(r['26-27']),
   }));
 }
@@ -137,7 +139,8 @@ const SEGMENT_DRIVERS = {
 function segmentTable(rows) {
   const bySeg = new Map();
   for (const r of rows) {
-    if (!bySeg.has(r.segment)) bySeg.set(r.segment, { segment: r.segment, gst: new Set(), qty: [0, 0, 0, 0], leadsByGst: new Map() });
+    if (!bySeg.has(r.segment)) bySeg.set(r.segment, { segment: r.segment, gst: new Set(), qty: [0, 0, 0, 0],
+                                                        leadsByGst: new Map(), rsmQtyByGst: new Map() });
     const d = bySeg.get(r.segment);
     d.gst.add(r.gstin);
     const ys = [r.y1, r.y2, r.y3, r.y4];
@@ -146,20 +149,26 @@ function segmentTable(rows) {
     // count is a per-BA figure from the source leads file, so it must be attributed once per
     // distinct GSTIN here, never summed once per row, or it would be double- or triple-counted.
     if (r.leads !== null) d.leadsByGst.set(r.gstin, r.leads);
+    if (r.rsmTracked && r.rsmQty !== null) d.rsmQtyByGst.set(r.gstin, r.rsmQty);
   }
   const out = [];
   for (const d of bySeg.values()) {
     const totalQty = d.qty.reduce((a, b) => a + b, 0);
     const leadsTotal = [...d.leadsByGst.values()].reduce((a, b) => a + b, 0);
+    const rsmQtyTotal = [...d.rsmQtyByGst.values()].reduce((a, b) => a + b, 0);
+    // By instruction, the accounts appearing in RSM_Review_Master (West II) are treated as
+    // this dashboard's default Focus Accounts list for Pune. Since inclusion in that extract
+    // requires actual billing, Covered = Focus Accounts and Coverage % = 100% wherever any
+    // Focus Accounts exist - a direct consequence of this definition, not a separately
+    // measured result. Scheme Points still have no source for Pune (no KOP-Q2 style file).
+    const focusAccounts = d.rsmQtyByGst.size > 0 ? d.rsmQtyByGst.size : 0;
     out.push({
       segment: d.segment, driver: SEGMENT_DRIVERS[d.segment] || '(no driver on file for this segment name)',
       baCount: d.gst.size, qty: d.qty, totalQty,
-      // Focus Accounts / Covered / Coverage% / Scheme Points columns still have no source for
-      // Pune (see README) - only Leads is now real, from the Humrahi supplier-side leads file
-      // (GSTIN-matched, 90 of 2,987 BAs), added after Focus/KOP/RSM were confirmed absent.
-      focusAccounts: null, covered: null, coveragePct: null,
+      focusAccounts: focusAccounts, covered: focusAccounts, coveragePct: focusAccounts > 0 ? 1 : null,
       kopAchieved: null, kopTarget: null, pointsPct: null,
       leads: d.leadsByGst.size > 0 ? leadsTotal : null,
+      rsmQty: d.rsmQtyByGst.size > 0 ? rsmQtyTotal : null,
     });
   }
   out.sort((a, b) => b.totalQty - a.totalQty);
