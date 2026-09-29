@@ -456,20 +456,22 @@ function renderSegmentTable(seg) {
     '<tr><th>Segment</th><th>Sales Driver (reference)</th><th>BAs</th><th>Total Qty</th>' +
     '<th>Focus Accounts</th><th>Covered</th><th>Coverage %</th>' +
     '<th>Scheme Pts Achieved</th><th>Scheme Pts Target</th><th>Scheme Pts %</th><th>Leads</th>' +
-    '<th>RSM Qty (Sep 26 YTD)</th></tr>';
+    '<th>RSM Qty (Sep 26 YTD)</th><th>Lead Pipeline: Total</th><th>Lead Pipeline: Won</th></tr>';
   document.querySelector('#segmentTable tbody').innerHTML = seg.map(s => '<tr>' +
     '<td>' + escapeHtml(s.segment) + '</td>' +
     '<td style="text-align:left;color:var(--ink-soft);font-size:12px;white-space:normal;max-width:220px">' + escapeHtml(s.driver) + '</td>' +
     '<td class="num">' + fmt(s.baCount) + '</td>' +
     '<td class="num">' + fmt(s.totalQty) + '</td>' +
-    '<td class="num" title="Default = accounts appearing in RSM_Review_Master (West II), GSTIN-matched">' + fmt(s.focusAccounts) + '</td>' +
-    '<td class="num" title="Equals Focus Accounts by construction - inclusion in the RSM extract requires billing">' + fmt(s.covered) + '</td>' +
+    '<td class="num" title="Revised Focus Accounts list (Final_Focus_Outlets_Pune_PCMC_Kolhapur_OEM.xlsx), GST-matched - 665 accounts">' + fmt(s.focusAccounts) + '</td>' +
+    '<td class="num" title="Equals Focus Accounts by construction - every account on this list is treated as covered by definition, not separately measured">' + fmt(s.covered) + '</td>' +
     '<td class="num" title="100% wherever any Focus Accounts exist - a direct result of the definition, not separately measured">' + fmtPct(s.coveragePct) + '</td>' +
     '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num pct-grey" title="No KOP-Q2 source for Pune">N/A</td>' +
     '<td class="num">' + (s.leads !== null ? fmt(s.leads) : '\u2013') + '</td>' +
     '<td class="num">' + (s.rsmQty !== null ? fmt(s.rsmQty) : '\u2013') + '</td>' +
+    '<td class="num" title="From Pune_26-27_Influencer.csv + Pune_26-27_Supplier.csv, Focus Accounts only">' + (s.pipelineLeads !== null ? fmt(s.pipelineLeads) : '\u2013') + '</td>' +
+    '<td class="num">' + (s.pipelineWon !== null ? fmt(s.pipelineWon) : '\u2013') + '</td>' +
     '</tr>').join('');
 }
 

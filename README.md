@@ -229,6 +229,37 @@ Accounts and billing coverage come from two independent sources and can
 genuinely differ). Scheme Points columns remain N/A — there's still no
 KOP-Q2-style target file for Pune to compute those from.
 
+## Focus Accounts revised to a genuine list, Lead Pipeline added, map updated
+
+**Focus Accounts definition replaced.** The earlier 44-account definition (RSM_Review_Master West
+II billing tracking) was always a stated approximation, used only because no dedicated Focus
+Accounts list existed for Pune. Final_Focus_Outlets_Pune_PCMC_Kolhapur_OEM.xlsx provided one: 887
+accounts explicitly classified "Focus", GST-matched against Pune's 2,987-BA list — 665 matched
+and now define Focus Accounts here. Effect: Focus Accounts in the segment table jumped from ~44
+to 665; Coverage % remains 100% by the same construction as before (every account on the list is
+treated as covered by definition, not separately measured).
+
+**Lead Pipeline columns added** (Lead Pipeline: Total / Won), sourced from
+Pune_26-27_Influencer.csv and Pune_26-27_Supplier.csv, matching the same methodology used to
+build Pune_Lead_Pipeline_Relationships.xlsx. Shown only for Focus Accounts, matching Excel's own
+Segment Calc convention. Verified against Excel exactly: 825 total leads, 184 Closed Won, across
+all segments.
+
+**A real bug caught and fixed during this update:** the dashboard's own JS was aggregating lead
+pipeline totals without checking the Focus flag, silently including non-Focus accounts that also
+happen to have lead data (347 total GSTINs have lead data, only 204 are Focus). This inflated
+segment totals (e.g. R1 showed 190 instead of the correct 108). Also hit the same column-rename
+issue as the Excel side had earlier in this project — the JS was still looking for the *old*
+Focus column header name after it was renamed, which would have silently broken the entire Focus
+Accounts count. Both fixed and reverified against Excel's own figures exactly.
+
+**Map updated** (Pune_Hotspot_Map_v2.html): new "Focus Account leads" overlay layer (purple
+markers, sized by lead volume), independently toggleable, layered on top of the existing
+Hotspot/Area-of-Interest classification. 19 additional localities geocoded that weren't
+previously on the map, including the top 3 by lead volume (Timber Market, Bhawani Peth, Warje).
+Covers 757 of 825 leads and 166 of 204 Focus Accounts with lead activity; smaller-volume
+localities (54 of 74 with focus-account lead activity) are not yet geocoded.
+
 ## Updating the data
 
 Edit `Pune_Summary_Data.xlsx`'s "Detailed Sheet-Pune" tab directly, save,
