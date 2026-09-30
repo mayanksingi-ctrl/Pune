@@ -22,6 +22,7 @@ function prepareRows(raw) {
     rsmQty: toNum(r['RSM: Sale Qty (Sep 26 YTD)']),
     pipelineLeads: toNum(r['Lead Pipeline: Total Leads']),
     pipelineWon: toNum(r['Lead Pipeline: Closed Won']),
+    rsmPoints: toNum(r['RSM: Points Earned (Sep 26 YTD)']),
     y1: toNum(r['23-24']), y2: toNum(r['24-25']), y3: toNum(r['25-26']), y4: toNum(r['26-27']),
   }));
 }
@@ -40,6 +41,8 @@ function matchesFilters(r, f) {
   if (f.productCategory !== '(All)' && r.productCategory !== f.productCategory) return false;
   if (f.localityCategory !== '(All)' && r.localityCategory !== f.localityCategory) return false;
   if (f.locality !== '(All)' && r.cluster !== f.locality) return false;
+  if (f.focusAccount === 'Yes' && !r.rsmTracked) return false;
+  if (f.focusAccount === 'No' && r.rsmTracked) return false;
   return true;
 }
 
@@ -143,7 +146,7 @@ function segmentTable(rows) {
   for (const r of rows) {
     if (!bySeg.has(r.segment)) bySeg.set(r.segment, { segment: r.segment, gst: new Set(), qty: [0, 0, 0, 0],
                                                         leadsByGst: new Map(), rsmQtyByGst: new Map(),
-                                                        focusGst: new Set(), pipelineByGst: new Map() });
+                                                        focusGst: new Set(), pipelineByGst: new Map(), pointsByGst: new Map() });
     const d = bySeg.get(r.segment);
     d.gst.add(r.gstin);
     const ys = [r.y1, r.y2, r.y3, r.y4];
@@ -155,6 +158,7 @@ function segmentTable(rows) {
     if (r.rsmTracked && r.rsmQty !== null) d.rsmQtyByGst.set(r.gstin, r.rsmQty);
     if (r.rsmTracked) d.focusGst.add(r.gstin);
     if (r.rsmTracked && r.pipelineLeads !== null) d.pipelineByGst.set(r.gstin, { leads: r.pipelineLeads, won: r.pipelineWon || 0 });
+    if (r.rsmPoints !== null) d.pointsByGst.set(r.gstin, r.rsmPoints);
   }
   const out = [];
   for (const d of bySeg.values()) {
@@ -163,21 +167,34 @@ function segmentTable(rows) {
     const rsmQtyTotal = [...d.rsmQtyByGst.values()].reduce((a, b) => a + b, 0);
     const pipelineLeadsTotal = [...d.pipelineByGst.values()].reduce((a, b) => a + b.leads, 0);
     const pipelineWonTotal = [...d.pipelineByGst.values()].reduce((a, b) => a + b.won, 0);
+    const pointsTotal = [...d.pointsByGst.values()].reduce((a, b) => a + b, 0);
     // Focus Accounts now come from the revised Focus Accounts list (GST-matched from
     // Final_Focus_Outlets_Pune_PCMC_Kolhapur_OEM.xlsx), not the old RSM-tracking proxy - this
     // is a genuine, much larger population (665 GSTINs) than the earlier 44-account stand-in.
     // Covered = Focus Accounts and Coverage % = 100% by the same construction as before: every
     // account on this list is treated as covered by definition, not separately measured.
     const focusAccounts = d.focusGst.size;
+    const coveragePct = focusAccounts > 0 ? 1 : null;
+    const driver = SEGMENT_DRIVERS[d.segment] || '(no driver on file for this segment name)';
+    const hasCoverageParam = /coverage/.test(driver);
+    const hasPointsParam = /point/.test(driver);
+    const hasLeadsParam = /lead/.test(driver);
+    const leadsForAchievement = d.leadsByGst.size > 0 ? leadsTotal : null;
+    const checks = [];
+    if (hasCoverageParam) checks.push((coveragePct || 0) > 0);
+    if (hasPointsParam) checks.push(pointsTotal > 0);
+    if (hasLeadsParam) checks.push((leadsForAchievement || 0) > 0);
+    const achieved = checks.length > 0 ? checks.every(c => c) : null;
     out.push({
-      segment: d.segment, driver: SEGMENT_DRIVERS[d.segment] || '(no driver on file for this segment name)',
+      segment: d.segment, driver,
       baCount: d.gst.size, qty: d.qty, totalQty,
-      focusAccounts: focusAccounts, covered: focusAccounts, coveragePct: focusAccounts > 0 ? 1 : null,
-      kopAchieved: null, kopTarget: null, pointsPct: null,
-      leads: d.leadsByGst.size > 0 ? leadsTotal : null,
+      focusAccounts: focusAccounts, covered: focusAccounts, coveragePct,
+      kopAchieved: d.pointsByGst.size > 0 ? pointsTotal : null, kopTarget: null, pointsPct: null,
+      leads: leadsForAchievement,
       rsmQty: d.rsmQtyByGst.size > 0 ? rsmQtyTotal : null,
       pipelineLeads: d.pipelineByGst.size > 0 ? pipelineLeadsTotal : null,
       pipelineWon: d.pipelineByGst.size > 0 ? pipelineWonTotal : null,
+      hasCoverageParam, hasPointsParam, hasLeadsParam, achieved,
     });
   }
   out.sort((a, b) => b.totalQty - a.totalQty);

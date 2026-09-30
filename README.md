@@ -260,6 +260,37 @@ previously on the map, including the top 3 by lead volume (Timber Market, Bhawan
 Covers 757 of 825 leads and 166 of 204 Focus Accounts with lead activity; smaller-volume
 localities (54 of 74 with focus-account lead activity) are not yet geocoded.
 
+## Process input parameters added, plus a Focus Account filter (Excel and web)
+
+**Process input parameters** added to the Segment table, matching Gujarat's format exactly:
+Coverage/Points/Leads Param columns (derived from each segment's existing Sales Driver text) and
+an aggregate Achieved column (Yes only if every applicable parameter shows real activity). Scheme
+Pts Achieved is now populated with real data too, from RSM Review West II's points column
+(segment-merged the same way Focus Accounts and RSM Qty already were).
+
+**Pipeline data added to SO Performance**, not the Segment table — the source file
+(Proejct_Review_Data___West_II.xlsb) is organized by Sales Officer, not by BA Segment or
+individual account, so it can't be broken down by R1/R2/Kitchen/etc. the way per-account data can.
+Four new columns: Pipeline Target (3X CM), Pipeline Ach, No of New Leads, Pipeline from New Leads.
+
+**Focus Account filter added** (Excel and this dashboard) — "(All)/Yes/No", filtering every table
+to Focus-only or non-Focus-only accounts. On the Excel side, this required a genuinely new
+supporting sheet ("Focus Cube") since the main Cube sheet has no per-account Focus tag and can't
+be split by it without rebuilding from the underlying account-level data; that Cube also carries
+a Product Category dimension not present in Detailed Sheet-Pune, so the new Focus filter works
+alongside every other filter except Product Category specifically, by design, not oversight.
+
+**Two real bugs surfaced and fixed while building this**, both worth knowing about since the same
+type of issue has recurred in this project before: pandas silently drops rows with a null value
+in any groupby column (58 Focus Accounts had a blank BA Segment, worth exactly 9,269 units that
+vanished from filtered totals until caught), and the familiar Turnkey Contractor/COMMERCIAL PRJ.
+segment-merge omission reappeared in the new Focus Cube specifically. A third, unrelated bug also
+surfaced once the filter could produce fewer than 10 populated segments: two formulas compared a
+blank cell to 0 using "=", which is a false comparison in Excel and threw #VALUE! errors — fixed
+to check with ISNUMBER first. All three verified fixed: Excel and this dashboard's own JavaScript
+now agree exactly under all three filter states (Focus=Yes: 1,559,244; Focus=No: 936,709;
+Focus=(All): 2,495,953).
+
 ## Updating the data
 
 Edit `Pune_Summary_Data.xlsx`'s "Detailed Sheet-Pune" tab directly, save,

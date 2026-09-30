@@ -141,7 +141,8 @@
       <table id="soTable">
         <thead><tr><th>SO Name</th><th>Designation</th><th>All Accounts</th><th>Total Visits (PJP)</th>
           <th>Visit Ach%</th><th>Focus Accounts</th><th>Focus Visits (PJP)</th><th>Focus Ach%</th>
-          <th>Sep'26 Target</th><th>Sep'26 Ach</th><th>Sep'26 Ach%</th></tr></thead>
+          <th>Sep'26 Target</th><th>Sep'26 Ach</th><th>Sep'26 Ach%</th>
+          <th>Pipeline Target (3X CM)</th><th>Pipeline Ach</th><th>No of New Leads</th><th>Pipeline from New Leads</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -165,7 +166,7 @@ let ROWS = [];
 let DEV_DATA = [];
 let SO_DATA = [];
 const state = { baType: '(All)', segment: '(All)', loyalty: '(All)', productCategory: '(All)',
-                localityCategory: '(All)', locality: '(All)' };
+                localityCategory: '(All)', locality: '(All)', focusAccount: '(All)' };
 
 const LISTS = {
   baType: ['(All)', 'OEM', 'Projects', 'Retail'],
@@ -246,6 +247,7 @@ function buildFilterBar() {
   // querySelector) that rebuilds the Locality dropdown's own option list.
   bar.appendChild(makeSelect('localityCategory', 'Locality Category', LISTS.localityCategory, refreshLocalityOptions));
   bar.appendChild(makeSelect('locality', 'Locality', localitiesForCurrentCategory(), null, 'localitySelect'));
+  bar.appendChild(makeSelect('focusAccount', 'Focus Account', ['(All)', 'Yes', 'No']));
   refreshLocalityLabel();
 }
 
@@ -344,6 +346,10 @@ function renderSOPerformance() {
     '<td class="num">' + fmt(so.sepTarget) + '</td>' +
     '<td class="num">' + fmt(so.sepAch) + '</td>' +
     '<td class="num heat-cell" style="' + (so.sepAchPct !== null ? heatStyle(so.sepAchPct, SO_DATA.map(s=>s.sepAchPct).filter(v=>v!==null)) : '') + '">' + fmtPct(so.sepAchPct) + '</td>' +
+    '<td class="num">' + fmt(so.pipelineTarget) + '</td>' +
+    '<td class="num">' + fmt(so.pipelineAch) + '</td>' +
+    '<td class="num">' + fmt(so.newLeads) + '</td>' +
+    '<td class="num">' + fmt(so.pipelineFromLeads) + '</td>' +
     '</tr>').join('');
 }
 
@@ -456,7 +462,8 @@ function renderSegmentTable(seg) {
     '<tr><th>Segment</th><th>Sales Driver (reference)</th><th>BAs</th><th>Total Qty</th>' +
     '<th>Focus Accounts</th><th>Covered</th><th>Coverage %</th>' +
     '<th>Scheme Pts Achieved</th><th>Scheme Pts Target</th><th>Scheme Pts %</th><th>Leads</th>' +
-    '<th>RSM Qty (Sep 26 YTD)</th><th>Lead Pipeline: Total</th><th>Lead Pipeline: Won</th></tr>';
+    '<th>RSM Qty (Sep 26 YTD)</th><th>Lead Pipeline: Total</th><th>Lead Pipeline: Won</th>' +
+    '<th>Coverage Param</th><th>Points Param</th><th>Leads Param</th><th>Achieved</th></tr>';
   document.querySelector('#segmentTable tbody').innerHTML = seg.map(s => '<tr>' +
     '<td>' + escapeHtml(s.segment) + '</td>' +
     '<td style="text-align:left;color:var(--ink-soft);font-size:12px;white-space:normal;max-width:220px">' + escapeHtml(s.driver) + '</td>' +
@@ -465,13 +472,18 @@ function renderSegmentTable(seg) {
     '<td class="num" title="Revised Focus Accounts list (Final_Focus_Outlets_Pune_PCMC_Kolhapur_OEM.xlsx), GST-matched - 665 accounts">' + fmt(s.focusAccounts) + '</td>' +
     '<td class="num" title="Equals Focus Accounts by construction - every account on this list is treated as covered by definition, not separately measured">' + fmt(s.covered) + '</td>' +
     '<td class="num" title="100% wherever any Focus Accounts exist - a direct result of the definition, not separately measured">' + fmtPct(s.coveragePct) + '</td>' +
-    '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
-    '<td class="num" title="No KOP-Q2 source for Pune">N/A</td>' +
-    '<td class="num pct-grey" title="No KOP-Q2 source for Pune">N/A</td>' +
+    '<td class="num" title="From RSM Review West II, GST-matched">' + (s.kopAchieved !== null ? fmt(s.kopAchieved) : 'N/A') + '</td>' +
+    '<td class="num" title="No target source for Pune">N/A</td>' +
+    '<td class="num pct-grey" title="No target source for Pune">N/A</td>' +
     '<td class="num">' + (s.leads !== null ? fmt(s.leads) : '\u2013') + '</td>' +
     '<td class="num">' + (s.rsmQty !== null ? fmt(s.rsmQty) : '\u2013') + '</td>' +
     '<td class="num" title="From Pune_26-27_Influencer.csv + Pune_26-27_Supplier.csv, Focus Accounts only">' + (s.pipelineLeads !== null ? fmt(s.pipelineLeads) : '\u2013') + '</td>' +
     '<td class="num">' + (s.pipelineWon !== null ? fmt(s.pipelineWon) : '\u2013') + '</td>' +
+    '<td class="num">' + (s.hasCoverageParam ? 'Yes' : 'No') + '</td>' +
+    '<td class="num">' + (s.hasPointsParam ? 'Yes' : 'No') + '</td>' +
+    '<td class="num">' + (s.hasLeadsParam ? 'Yes' : 'No') + '</td>' +
+    '<td class="num" style="' + (s.achieved === true ? 'background:#d4edda' : s.achieved === false ? 'background:#f8d7da' : '') + '">' +
+    (s.achieved === null ? 'N/A' : s.achieved ? 'Yes' : 'No') + '</td>' +
     '</tr>').join('');
 }
 
